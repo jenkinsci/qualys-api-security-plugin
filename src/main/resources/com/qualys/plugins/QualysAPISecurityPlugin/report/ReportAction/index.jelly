@@ -1,0 +1,233 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout" xmlns:f="/lib/form">
+ 
+<l:layout>   
+
+<l:side-panel class="padding0">
+	<div class="left-panel-container">
+		<div class="qualys_logo">
+			<img src="${resURL}/plugin/QualysAPISecurityPlugin/images/logo.png"/>
+		</div>
+	
+		<div class="left-pill-item summary selected">
+			<span>Summary</span>
+		</div>
+		<div class="left-pill-item vulns">
+			<span>Issues</span>
+		</div>
+	</div>
+</l:side-panel>
+ 
+<l:main-panel>
+	<script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/jquery/js/jquery-2.1.4.min.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/datatable/js/jquery.dataTables.min.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/jquery/js/chart.min.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/js/report.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/jquery/js/chart-1.0.1.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="${resURL}/plugin/QualysAPISecurityPlugin/css/style.css" />
+	<link href="${resURL}/plugin/QualysAPISecurityPlugin/datatable/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css"/>
+	
+	<style>
+	 	.status-icon.not-configured{
+		     background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/dash.png') no-repeat center center;
+			 background-size: contain;
+			 text-align: -webkit-center;
+			 text-align: center;
+		}
+		
+		.status-icon.ok{
+			background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/ok.png') no-repeat center center;
+	    	background-size: contain;
+	    	height:20px;
+		}
+		.status-icon.fail{
+			background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/fail.png') no-repeat center center;
+			background-size: contain;
+		}
+		
+		table#vulnsTable{
+			  margin: 0 auto;
+			  width: 100%;
+			  clear: both;
+			  border-collapse: collapse;
+			  table-layout: fixed; // ***********add this
+			  word-wrap:break-word; // ***********and this
+		}
+		
+		.report_link_note{
+			font-weight: normal;
+		    font-size: 11px;
+		    margin-left: 90px;
+		}
+		
+		table#vulnsTable td{
+			word-break: break-all;
+		}
+		#vulnsCount-link{
+			color:blue;
+		}
+		
+		td.details-control {
+		    background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/details_open.png') no-repeat center center;
+		    cursor: pointer;
+		}
+		tr.shown td.details-control {
+		    background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/details_close.png') no-repeat center center;
+		}
+		
+	 </style>
+	
+	<div id="build-summary" class="reports-main-content">
+		<div id="summary-content" >
+			<div id="summary-left-panel" style="display:none;"></div>
+			<div id="summary-right-panel">
+				
+				<div class="build-summary-reason">
+					<div class="vulnschart" id="summary-chart"> 
+						<div class="vulnschart-content">
+							<div class="report-title center vulnschart-content-tiitle"> Pass/Fail Criteria Results Summary</div>
+							<div class="report-chart-div">
+								<div id="build-reason-table">
+									<table id="build-summary-table">
+										<!-- <tr><td colspan="9" id="summaryTableImageId"> <div class="image-status-flag"></div><span id="summary-image-id"></span> </td></tr> -->
+										<tr class="column-header">
+											<td></td>
+											<td>Grade</td>
+											<td>Security findings</td>
+											<td>Data findings</td>
+											<td>Validation findings</td>
+										</tr>
+										<tr>
+											<td>Criteria Evaluation</td>
+											<td id="grade-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div> </div> </td>
+											<td id="security-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
+											<td id="data-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
+											<td id="validation-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
+										</tr>
+									</table>
+								</div>
+								<div id="summary-legend-div">
+									<div style="float:right; margin-left:10px;"> <div class="status-icon legend not-configured"> </div><span> Not Configured</span> </div>
+									<div style="float:right; margin-left:10px;"> <div class="status-icon legend ok"> </div> <span>Satisfies criteria</span> </div>
+								    <div style="float:right; margin-left:10px;"> <div class="status-icon legend fail"></div> <span>Violates criteria</span> </div>
+								</div>
+							</div>
+						</div>
+					</div>	
+				</div>
+				
+				<div style="clear: both;"></div>
+				
+				<div class="card" id="reportContainer" >
+					<div class="card-title">Results Summary</div>
+					<div class="card-content">
+						
+					    <div id="resultContents" class="marginLeft10">
+						    <table>
+						    <tr> <td class="status_header"> Application ID: </td>  <td> ${it.apiId} </td></tr>
+						    <tr> <td class="status_header"> Swagger State: </td>  <td> ${it.swaggerState} </td></tr>
+						    <tr> <td class="status_header"> Grade: </td>  <td> ${it.grade} </td></tr>
+						    <tr> <td class="status_header"> Criticality: </td>  <td> ${it.criticality} </td></tr>
+						    <tr> <td class="status_header"> Total Issues: </td>  <td> ${it.issueCounter} </td></tr>
+						    </table>
+					    </div>
+					</div>
+				</div>
+				
+				<div class="card" id="sev-don-chart" style="display:block"> 
+					<div class="vulnschart-content">
+						<div class="card-title">Issues (${it.issueCounter})</div>
+						<div class="report-chart-div">
+							<div id="sevVulns-error" style="margin: 92px;">There are no findings!</div>
+							<canvas id="sevVulns" width="180" height="180" ></canvas>
+							<div id="pie-legend-div" class="chart-legend" ></div>
+						</div>
+					</div>
+				</div>
+				
+				<div style="clear: both;"></div>
+				
+				<div class="card" id="security-vulns-chart" style="display:block"> 
+					<div class="vulnschart-content">
+						<div class="card-title"> Security Findings/Issues (<span id="securityIssuesCount"></span>) </div>
+						<div class="report-chart-div">
+							<div id="secVulns-error" style="margin: 92px;">There are no findings!</div>
+							<canvas id="secVulns" width="180" height="180" ></canvas>
+							<div id="security-vulns-legend-div" class="chart-legend" ></div>
+						</div>
+					</div>
+				</div>
+				
+				<div class="card" id="data-vulns-chart" style="display:block"> 
+					<div class="vulnschart-content">
+						<div class="card-title"> Data Findings/Issues (<span id="dataIssuesCount"></span>) </div>
+						<div class="report-chart-div">
+							<div id="dataVulns-error" style="margin: 92px;">There are no findings!</div>
+							<canvas id="dataVulns" width="180" height="180" ></canvas>
+							<div id="data-vulns-legend-div" class="chart-legend" ></div>
+						</div>
+					</div>
+				</div>
+				
+				<div class="card" id="validation-vulns-chart" style="display:block"> 
+					<div class="vulnschart-content">
+						<div class="card-title"> Validation Findings/Issues (<span id="validationIssuesCount"></span>) </div>
+						<div class="report-chart-div">
+							<div id="valVulns-error" style="margin: 92px;">There are no findings!</div>
+							<canvas id="valVulns" width="180" height="180" ></canvas>
+							<div id="validation-vulns-legend-div" class="chart-legend" ></div>
+						</div>
+					</div>
+				</div>
+				
+				<div style="clear: both;"></div>
+				
+			</div>
+		</div>
+	</div>
+		
+	<div id="vulnerabilities" class="reports-main-content" style="display: grid;">
+		<div class="summary-title"> QUALYS STATIC ASSESSMENT RESULTS </div>
+		<div id="vulnsTable-content">
+	  		<table id="vulnsTable" class="display" width="100%"></table>
+	   	</div>
+	</div>
+	
+	<script type="text/javascript">
+		jQuery("#vulnerabilities").hide();
+		var myAction= <st:bind value="${it}" />
+		
+		jQuery(".left-pill-item").on("click", function(e){
+			var selected = jQuery(this).hasClass("selected");
+			if(!selected) {
+				jQuery(".left-pill-item").removeClass("selected");
+				window.scrollTo(0, 0);
+				jQuery(".reports-main-content").hide();
+				jQuery(this).addClass("selected");
+				if(jQuery(this).hasClass("vulns")){
+					jQuery("#vulnerabilities").show();
+				}
+				if(jQuery(this).hasClass("summary")){
+					jQuery("#build-summary").show();
+				}
+			}
+		});
+		var buildEvaluationResult = ${it.buildEvaluationResult};
+		var sectionWiseIssueCount = ${it.sectionWiseIssueCount};
+		jQuery("#securityIssuesCount").html(sectionWiseIssueCount.SECURITY);
+		jQuery("#dataIssuesCount").html(sectionWiseIssueCount.DATA);
+		jQuery("#validationIssuesCount").html(sectionWiseIssueCount.VALIDATION);
+		var findingIdWiseData = ${it.findingIdWiseData};
+		//draw pie chart
+		drawVulnsCharts(sectionWiseIssueCount);
+		drawsverityWiseCharts(buildEvaluationResult.result.groupCriticalityCounts);
+		//show Issues table
+		showVulnsTable(findingIdWiseData);
+		//update SummaryTable with values
+		updateSummaryTable(buildEvaluationResult);
+      	
+	</script>
+
+</l:main-panel>
+</l:layout>
+</j:jelly>
