@@ -10,7 +10,7 @@
     <relativePath/>
   </parent>
   <groupId>com.qualys.plugins</groupId>
-  <artifactId>QualysAPISecurityPlugin</artifactId>
+  <artifactId>qualys-api-security</artifactId>
   <version>1.0.0</version>
   <packaging>hpi</packaging>
 
