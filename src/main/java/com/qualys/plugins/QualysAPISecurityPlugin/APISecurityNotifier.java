@@ -23,6 +23,7 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -72,8 +73,7 @@ public class APISecurityNotifier extends Builder {
     private String apiId;
     private String proxyServer;
     private int proxyPort = PROXY_PORT;
-    private String proxyUsername;
-    private String proxyPassword;
+    private String proxyCredentialsId;
     private boolean useProxy = false;
     private String swaggerPath;
     private String newAppName;
@@ -138,15 +138,10 @@ public class APISecurityNotifier extends Builder {
 		this.proxyPort = proxyPort;
 	}
 	
-	public String getProxyUsername() { return proxyUsername; }
+	public String getProxyCredentials() { return proxyCredentialsId; }
 
 	@DataBoundSetter
-	public void setProxyUsername(String proxyUsername) { this.proxyUsername = proxyUsername; }
-	
-	public String getProxyPassword() { return proxyPassword; }
-
-	@DataBoundSetter
-	public void setProxyPassword(String proxyPassword) { this.proxyPassword = proxyPassword; }
+	public void setProxyCredentialsId(String proxyCredentialsId) { this.proxyCredentialsId = proxyCredentialsId; }
 	
 	public boolean getUseProxy() { return useProxy; }
 
@@ -274,8 +269,10 @@ public class APISecurityNotifier extends Builder {
             }
         }
         
+        @POST
         public ListBoxModel doFillCredsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
-            StandardListBoxModel result = new StandardListBoxModel();
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
                 	return result.add(credsId);
@@ -292,12 +289,13 @@ public class APISecurityNotifier extends Builder {
                     .withMatching(CredentialsMatchers.withId(credsId));
         }
         
+        @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
-        		@QueryParameter String proxyPort, @QueryParameter String proxyUsername, @QueryParameter String proxyPassword, @QueryParameter boolean useProxy) {
-        	
+        		@QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, @QueryParameter boolean useProxy) {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	StandardListBoxModel model = new StandardListBoxModel();
         	try {
-        		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer, proxyPort, proxyUsername, proxyPassword)) {
+        		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer)) {
         			int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
                 	
                 	String apiUser = "";
@@ -323,6 +321,21 @@ public class APISecurityNotifier extends Builder {
                     }
             		QualysAuth auth = new QualysAuth();
                 	auth.setQualysCredentials(server, apiUser, apiPass);
+                	
+                	String proxyUsername = "";
+                	String proxyPassword = "";
+                	if (StringUtils.isNotEmpty(proxyCredentialsId)) {
+
+                        StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
+                                        StandardUsernamePasswordCredentials.class,
+                                        item,
+                                        null,
+                                        Collections.<DomainRequirement>emptyList()),
+                                CredentialsMatchers.withId(proxyCredentialsId));
+
+                        proxyUsername = (c != null ? c.getUsername() : "");
+                        proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
+                    }
                 	if(useProxy) {
                     	//int proxyPortInt = Integer.parseInt(proxyPort);
                     	auth.setProxyCredentials(proxyServer, proxyPortInt, proxyUsername, proxyPassword);
@@ -345,7 +358,7 @@ public class APISecurityNotifier extends Builder {
         	return model.withEmptySelection();
         }
         
-        public boolean isFilledInputs(String platform, String apiServer, String credsId, boolean useProxy, String proxyServer, String proxyPort, String proxyUsername, String proxyPassword) {
+        public boolean isFilledInputs(String platform, String apiServer, String credsId, boolean useProxy, String proxyServer) {
 			if(platform.equalsIgnoreCase("pcp") && StringUtils.isBlank(apiServer)) return false;
         	if(StringUtils.isBlank(credsId)) return false;
 			if(useProxy && StringUtils.isBlank(proxyServer)) return false;
@@ -361,15 +374,19 @@ public class APISecurityNotifier extends Builder {
             return result;
         }
         
+        @POST
         public FormValidation doCheckConnection(@QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId,
-        		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyUsername, 
-        		@QueryParameter String proxyPassword, @QueryParameter boolean useProxy, @AncestorInPath Item item) {
+        		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, 
+        		@QueryParameter boolean useProxy, @AncestorInPath Item item) {
 
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	try {
             	int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
             	
             	String apiUser = "";
         		String apiPass = "";
+        		String proxyUsername = "";
+        		String proxyPassword = "";
         		String server = apiServer != null ? apiServer.trim() : "";
         		//set apiServer URL according to platform
             	if(!platform.equalsIgnoreCase("pcp")) {
@@ -391,6 +408,19 @@ public class APISecurityNotifier extends Builder {
                 }
         		QualysAuth auth = new QualysAuth();
             	auth.setQualysCredentials(server, apiUser, apiPass);
+            	
+        		if (StringUtils.isNotEmpty(proxyCredentialsId)) {
+
+                    StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
+                                    StandardUsernamePasswordCredentials.class,
+                                    item,
+                                    null,
+                                    Collections.<DomainRequirement>emptyList()),
+                            CredentialsMatchers.withId(proxyCredentialsId));
+
+                    proxyUsername = (c != null ? c.getUsername() : "");
+                    proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
+                }
             	if(useProxy) {
                 	//int proxyPortInt = Integer.parseInt(proxyPort);
                 	auth.setProxyCredentials(proxyServer, proxyPortInt, proxyUsername, proxyPassword);
@@ -427,13 +457,6 @@ public class APISecurityNotifier extends Builder {
             }
         }
         
-        public FormValidation doCheckProxyUser(@QueryParameter String proxyUser) {
-        	if(isNonUTF8String(proxyUser)) {
-            	return FormValidation.error("Please provide valid UTF-8 string value.");
-            }
-        	return FormValidation.ok();
-        }
-
         public FormValidation doCheckProxyPort(@QueryParameter String proxyPort) {
         	try {
         		if (proxyPort != null && !proxyPort.isEmpty() && proxyPort.trim().length() > 0) {
@@ -514,7 +537,9 @@ public class APISecurityNotifier extends Builder {
         	return FormValidation.ok();
         }
         
+        @POST
         public ListBoxModel doFillPlatformItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
         	for(Map<String, String> platform: getPlatforms()) {
         		Option e = new Option(platform.get("name"), platform.get("code"));
@@ -523,7 +548,9 @@ public class APISecurityNotifier extends Builder {
         	return model;
         }
         
+        @POST
         public ListBoxModel doFillSecurityCriticalityItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -532,7 +559,9 @@ public class APISecurityNotifier extends Builder {
         	return model;
         }
         
+        @POST
         public ListBoxModel doFillDataCriticalityItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -541,13 +570,35 @@ public class APISecurityNotifier extends Builder {
         	return model;
         }
         
+        @POST
         public ListBoxModel doFillValidationCriticalityItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
 		    	model.add(e1);
 	    	}
         	return model;
+        }
+        
+        @POST
+        public ListBoxModel doFillProxyCredentialsItems(@AncestorInPath Item item, @QueryParameter String credsId) {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+            StandardListBoxModel result = new StandardListBoxModel();
+            if (item == null) {
+            	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
+                	return result.add(credsId);
+                }
+            } else {
+            	if (!item.hasPermission(Item.EXTENDED_READ)
+                        && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                	return result.add(credsId);
+                }
+            }
+            return result
+                    .withEmptySelection()
+                    .withAll(CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, item, null, Collections.<DomainRequirement>emptyList()))
+                    .withMatching(CredentialsMatchers.withId(credsId));
         }
 
 		@Override
@@ -670,11 +721,25 @@ public class APISecurityNotifier extends Builder {
 			//buildLogger.println("Inavlid credentials! " + e.getMessage());
 			throw new Exception("Inavlid credentials! " + e.getMessage());
 		}
+    	String proxyUsername = "";
+		String proxyPassword = "";
     	//test connection first
     	QualysAuth auth = new QualysAuth();
     	auth.setQualysCredentials(apiServer, apiUser, apiPass);
     	if(useProxy) {
-        	//int proxyPortInt = Integer.parseInt(proxyPort);
+    		if (StringUtils.isNotEmpty(proxyCredentialsId)) {
+    			StandardUsernamePasswordCredentials credential = CredentialsMatchers.firstOrNull(
+    					CredentialsProvider.lookupCredentials(
+    							StandardUsernamePasswordCredentials.class,
+    							project, ACL.SYSTEM,
+    							URIRequirementBuilder.fromUri(apiServer).build()),
+    					CredentialsMatchers.withId(proxyCredentialsId));
+    			
+    			if (credential != null) {
+    				proxyUsername = (credential != null ? credential.getUsername() : "");
+                    proxyPassword = (credential != null ? credential.getPassword().getPlainText() : "");
+    			}
+            }
         	auth.setProxyCredentials(proxyServer, proxyPort, proxyUsername, proxyPassword);
     	}
     	
@@ -693,8 +758,7 @@ public class APISecurityNotifier extends Builder {
     	String artifactsDir = run.getArtifactsDir().getAbsolutePath();
     	try {
 			result = launcher.getChannel().call(new APISecLauncher(listener, apiId, newAppName, 
-	    			apiServer, apiUser, apiPass, useProxy, proxyServer, proxyPort, proxyUsername, proxyPassword, portalUrl,
-	    			swaggerPath, workspace.toString(), failConditionsConfigured, gson.toJson(criteriaObject)));
+	    			auth, portalUrl, swaggerPath, workspace.toString(), failConditionsConfigured, gson.toJson(criteriaObject)));
 		}catch(Exception e) {
 			e.printStackTrace(listener.getLogger());
 			throw new Exception(e.getMessage());

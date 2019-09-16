@@ -16,6 +16,7 @@ import com.qualys.plugins.QualysAPISecurityPlugin.QualysCriteria.QualysCriteria;
 import com.qualys.plugins.QualysAPISecurityPlugin.util.Helper;
 
 import hudson.model.TaskListener;
+import hudson.util.Secret;
 import jenkins.security.MasterToSlaveCallable;
 
 public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
@@ -28,14 +29,7 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     private String newAppName;
     private String portalUrl;
     
-    private String apiServer;
-    private String apiUser;
-    private String apiPass;
-    private boolean useProxy;
-    private String proxyServer;
-    private int proxyPort;
-    private String proxyUsername;
-    private String proxyPassword;
+    private QualysAuth auth;
     private String swaggerPath;
     private String workspace;
     private String criteria;
@@ -45,21 +39,13 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     private final static Logger logger = Helper.getLogger(APISecLauncher.class.getName());
     
     public APISecLauncher(TaskListener listener, String apiId, String newAppName, 
-    		String apiServer, String apiUser, String apiPass, boolean useProxy, String proxyServer, 
-    		int proxyPort, String proxyUsername, String proxyPassword, String portalUrl, String swaggerPath, String workspace,
+    		QualysAuth auth, String portalUrl, String swaggerPath, String workspace,
     		boolean failConditionsConfigured, String criteria) {
     	//this.run = run;
     	this.listener = listener;
     	this.apiId = apiId;
     	this.newAppName = newAppName;
-    	this.apiServer = apiServer;
-    	this.apiUser = apiUser;
-    	this.apiPass = apiPass;
-    	this.useProxy = useProxy;
-    	this.proxyServer = proxyServer;
-    	this.proxyPort = proxyPort;
-    	this.proxyUsername = proxyUsername;
-    	this.proxyPassword = proxyPassword;
+    	this.auth = auth;
     	this.portalUrl = portalUrl;
     	this.swaggerPath = swaggerPath;
     	this.workspace = workspace;
@@ -136,12 +122,7 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     
     public QualysAPISecResponse launchScan() throws Exception {
     	QualysAPISecResponse resp = null;
-    	QualysAuth auth = new QualysAuth();
-    	auth.setQualysCredentials(apiServer, apiUser, apiPass);
-    	if(useProxy) {
-        	//int proxyPortInt = Integer.parseInt(proxyPort);
-        	auth.setProxyCredentials(proxyServer, proxyPort, proxyUsername, proxyPassword);
-    	}
+    	
     	QualysAPISecClient apiClient = new QualysAPISecClient(auth, this.listener.getLogger());
     	
     	try {

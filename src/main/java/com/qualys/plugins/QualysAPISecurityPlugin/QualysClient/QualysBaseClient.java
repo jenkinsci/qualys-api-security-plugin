@@ -47,7 +47,7 @@ class QualysBaseClient {
     }
 
     protected String getBasicAuthHeader() {
-        String userPass = this.auth.getUsername() + ":" + this.auth.getPassword();
+        String userPass = this.auth.getUsername() + ":" + this.auth.getPassword().getPlainText();
         String encoded = Base64.getEncoder().encodeToString((userPass).getBytes(StandardCharsets.UTF_8));
         return encoded;
     }
@@ -59,7 +59,6 @@ class QualysBaseClient {
   	    	  .setConnectionRequestTimeout(this.timeout * 1000)
   	    	  .setSocketTimeout(this.timeout * 1000).build(); // Timeout settings
     	SSLContextBuilder builder = new SSLContextBuilder();
-    	builder.loadTrustMaterial(null, (chain, authType) -> true);
     	SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build());
     	final HttpClientBuilder clientBuilder = HttpClients.custom().setSSLSocketFactory(sslsf);
     	
@@ -74,16 +73,14 @@ class QualysBaseClient {
     		clientBuilder.setRoutePlanner(routePlanner);
     		
     		String username = this.auth.getProxyUsername();
-            String password = this.auth.getProxyPassword();
+            String password = this.auth.getProxyPassword().getPlainText();
             
             if (username != null && !"".equals(username.trim())) {
                 System.out.println("Using proxy authentication (user=" + username + ")");                
                 credentialsProvider.setCredentials(new AuthScope(proxyHost), 
                 								   new UsernamePasswordCredentials(username, password));
-            }            
-    		
+            }
     	}
-
     	return clientBuilder.build();
     } 
     
