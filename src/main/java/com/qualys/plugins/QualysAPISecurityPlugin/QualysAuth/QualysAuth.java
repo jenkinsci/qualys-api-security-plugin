@@ -1,5 +1,7 @@
 package com.qualys.plugins.QualysAPISecurityPlugin.QualysAuth;
 
+import hudson.util.Secret;
+
 enum AuthType {
     Basic, OAuth
 }
@@ -8,11 +10,11 @@ public class QualysAuth {
     private AuthType authType;
     private String server;
     private String username;
-    private String password;
+    private Secret password;
     private String authKey;
     private String proxyServer;
     private String proxyUsername;
-    private String proxyPassword;
+    private Secret proxyPassword;
     private int proxyPort;
 
     public QualysAuth () {
@@ -32,7 +34,7 @@ public class QualysAuth {
         return username;
     }
 
-    public String getPassword() {
+    public Secret getPassword() {
         return password;
     }
     
@@ -44,7 +46,7 @@ public class QualysAuth {
         return proxyUsername;
     }
 
-    public String getProxyPassword() {
+    public Secret getProxyPassword() {
         return proxyPassword;
     }
     public int getProxyPort() {
@@ -53,17 +55,25 @@ public class QualysAuth {
     public String getAuthKey() {
         return authKey;
     }
-   
+
     public void setQualysCredentials(String server, String username, String password) {
     	this.authType = AuthType.Basic;
         this.server = server;
         this.username = username;
-        this.password = password;
+        this.password = Secret.fromString(password);
     }
-    public void setProxyCredentials(String proxyServer, int proxyPort, String proxyUsername, String proxyPassword) {
+    
+    public void setProxyCredentials(String proxyServer, int proxyPort, String proxyUsername, Secret proxyPassword) {
     	this.proxyServer = proxyServer;
         this.proxyUsername = proxyUsername;
         this.proxyPassword = proxyPassword;
+        this.proxyPort = proxyPort;
+    }
+    
+    public void setProxyCredentials(String proxyServer, int proxyPort, String proxyUsername, String proxyPassword) {
+    	this.proxyServer = proxyServer;
+        this.proxyUsername = proxyUsername;
+        this.proxyPassword = Secret.fromString(proxyPassword);
         this.proxyPort = proxyPort;
     }
 

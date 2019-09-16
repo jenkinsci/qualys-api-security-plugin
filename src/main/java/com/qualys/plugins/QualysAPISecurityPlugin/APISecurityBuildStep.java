@@ -20,6 +20,7 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -42,6 +43,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import hudson.util.ListBoxModel.Option;
 import jenkins.model.Jenkins;
 
@@ -53,8 +55,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
     private String apiId;
     private String proxyServer;
     private int proxyPort;
-    private String proxyUsername;
-    private String proxyPassword;
+    private String proxyCredentials;
     private boolean useProxy = false;
     private String swaggerPath;
     private String newAppName;
@@ -113,15 +114,10 @@ public class APISecurityBuildStep extends AbstractStepImpl {
 		this.proxyPort = proxyPort;
 	}
 	
-	public String getProxyUsername() { return proxyUsername; }
+	public String getProxyCredentials() { return proxyCredentials; }
 
 	@DataBoundSetter
-	public void setProxyUsername(String proxyUsername) { this.proxyUsername = proxyUsername; }
-	
-	public String getProxyPassword() { return proxyPassword; }
-
-	@DataBoundSetter
-	public void setProxyPassword(String proxyPassword) { this.proxyPassword = proxyPassword; }
+	public void setProxyCredentials(String proxyCredentials) { this.proxyCredentials = proxyCredentials; }	
 	
 	public boolean getUseProxy() { return useProxy; }
 
@@ -183,8 +179,8 @@ public class APISecurityBuildStep extends AbstractStepImpl {
     public String getValidationCriticality() { return this.validationCriticality; }
     
 	@DataBoundConstructor
-    public APISecurityBuildStep( String platform, String apiServer, String credsId, boolean useProxy, String proxyServer, int proxyPort, String proxyUsername,
-    		String proxyPassword, String swaggerPath, String apiId, String newAppName, boolean isFailOnGrade, String grade, boolean isFailOnSecurityGroup,
+    public APISecurityBuildStep( String platform, String apiServer, String credsId, boolean useProxy, String proxyServer, int proxyPort, String proxyCredentials,
+    		String swaggerPath, String apiId, String newAppName, boolean isFailOnGrade, String grade, boolean isFailOnSecurityGroup,
     		String securityGroupCount, String securityCriticality, boolean isFailOnDataGroup, String dataGroupCount,	String dataCriticality,
     		boolean isFailOnValidationGroup, String validationGroupCount,	String validationCriticality) {
         this.platform = platform;
@@ -198,8 +194,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         if(this.useProxy) {
 	        this.proxyServer = proxyServer;
 	        this.proxyPort = proxyPort;
-	        this.proxyUsername = proxyUsername;
-	        this.proxyPassword = proxyPassword;
+	        this.proxyCredentials = proxyCredentials;
         }
         this.swaggerPath = swaggerPath;
         
@@ -297,8 +292,10 @@ public class APISecurityBuildStep extends AbstractStepImpl {
             }
         }
         
+        @POST
         public ListBoxModel doFillCredsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
-            StandardListBoxModel result = new StandardListBoxModel();
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
                 	return result.add(credsId);
@@ -315,9 +312,10 @@ public class APISecurityBuildStep extends AbstractStepImpl {
                     .withMatching(CredentialsMatchers.withId(credsId));
         }
         
+        @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
         		@QueryParameter String proxyPort, @QueryParameter String proxyUsername, @QueryParameter String proxyPassword, @QueryParameter boolean useProxy) {
-        	
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	StandardListBoxModel model = new StandardListBoxModel();
         	try {
         		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer, proxyPort, proxyUsername, proxyPassword)) {
@@ -384,15 +382,18 @@ public class APISecurityBuildStep extends AbstractStepImpl {
             return result;
         }
         
+        @POST
         public FormValidation doCheckConnection(@QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId,
-        		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyUsername, 
-        		@QueryParameter String proxyPassword, @QueryParameter boolean useProxy, @AncestorInPath Item item) {
-
+        		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentials, 
+        		@QueryParameter boolean useProxy, @AncestorInPath Item item) {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	try {
             	int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
             	
             	String apiUser = "";
         		String apiPass = "";
+        		String proxyUsername = "";
+        		String proxyPassword = "";
         		String server = apiServer != null ? apiServer.trim() : "";
         		//set apiServer URL according to platform
             	if(!platform.equalsIgnoreCase("pcp")) {
@@ -411,6 +412,18 @@ public class APISecurityBuildStep extends AbstractStepImpl {
 
                     apiUser = (c != null ? c.getUsername() : "");
                     apiPass = (c != null ? c.getPassword().getPlainText() : "");
+                }
+        		if (StringUtils.isNotEmpty(proxyCredentials)) {
+
+                    StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
+                                    StandardUsernamePasswordCredentials.class,
+                                    item,
+                                    null,
+                                    Collections.<DomainRequirement>emptyList()),
+                            CredentialsMatchers.withId(proxyCredentials));
+
+                    proxyUsername = (c != null ? c.getUsername() : "");
+                    proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
                 }
         		QualysAuth auth = new QualysAuth();
             	auth.setQualysCredentials(server, apiUser, apiPass);
@@ -450,13 +463,6 @@ public class APISecurityBuildStep extends AbstractStepImpl {
             }
         }
         
-        public FormValidation doCheckProxyUser(@QueryParameter String proxyUser) {
-        	if(isNonUTF8String(proxyUser)) {
-            	return FormValidation.error("Please provide valid UTF-8 string value.");
-            }
-        	return FormValidation.ok();
-        }
-
         public FormValidation doCheckProxyPort(@QueryParameter String proxyPort) {
         	try {
         		if (proxyPort != null && !proxyPort.isEmpty() && proxyPort.trim().length() > 0) {
@@ -537,7 +543,9 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         	return FormValidation.ok();
         }
         
+        @POST
         public ListBoxModel doFillSecurityCriticalityItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -546,7 +554,9 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         	return model;
         }
         
+        @POST
         public ListBoxModel doFillDataCriticalityItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -555,13 +565,35 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         	return model;
         }
         
+        @POST
         public ListBoxModel doFillValidationCriticalityItems() {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
 		    	model.add(e1);
 	    	}
         	return model;
+        }
+        
+        @POST
+        public ListBoxModel doFillProxyCredentialsItems(@AncestorInPath Item item, @QueryParameter String credsId) {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	StandardListBoxModel result = new StandardListBoxModel();
+            if (item == null) {
+            	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
+                	return result.add(credsId);
+                }
+            } else {
+            	if (!item.hasPermission(Item.EXTENDED_READ)
+                        && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                	return result.add(credsId);
+                }
+            }
+            return result
+                    .withEmptySelection()
+                    .withAll(CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, item, null, Collections.<DomainRequirement>emptyList()))
+                    .withMatching(CredentialsMatchers.withId(credsId));
         }
         
     }
@@ -589,8 +621,8 @@ public class APISecurityBuildStep extends AbstractStepImpl {
 			notifier.setUseProxy(step.getUseProxy());
     		notifier.setProxyServer(step.getProxyServer());
             notifier.setProxyPort(step.getProxyPort());
-            notifier.setProxyUsername(step.getProxyUsername());
-            notifier.setProxyPassword(step.getProxyPassword());
+            notifier.setProxyCredentials(step.getProxyCredentials());
+            //notifier.setProxyPassword(step.getProxyPassword().getPlainText());
             notifier.setPlatform(step.getPlatform());
             notifier.setSwaggerPath(step.getSwaggerPath());
             notifier.setNewAppName(step.getNewAppName());
