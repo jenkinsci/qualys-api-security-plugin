@@ -114,7 +114,7 @@
 		    </div></f:block> 
 	    </f:optionalBlock>
 	    
-	    <f:validateButton title="Test Connection" progress="Testing..." method="checkConnection" with="platform,apiServer,credsId,proxyServer,proxyPort,proxyUsername,proxyPassword,useProxy"/>
+	    <f:validateButton title="Test Connection" progress="Testing..." method="checkConnection" with="platform,apiServer,credsId,proxyServer,proxyPort,proxyCredentialsId,useProxy"/>
 	</f:section>
 	
 	
