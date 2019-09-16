@@ -43,7 +43,7 @@ A form appears with several input fields. Now you are ready to configure the plu
 You can optionally fail the build based on grade score or findings criticality. 
 
 1. If you want to fail the build based on grade score, tick the checkbox for "Fail with less than Grade score" and configure minimum score acceptable to you. If score is below your value, plugin will fail the build. 
-2. If you want to gail the build based on Security, Validation or Data findings, tick the appropriate checkbox and configure acceptable criticality value. If criticality found is more than configured value, plugin will fail the build. *Note that* a Qualys criticality `5` rating is the most dangerous vulnerability while criticality `1` is the least. 
+2. If you want to fail the build based on Security, Validation or Data findings, tick the appropriate checkbox and configure acceptable criticality value. If criticality found is more than configured value, plugin will fail the build. *Note that* a Qualys criticality `5` rating is the most dangerous vulnerability while criticality `1` is the least. 
 
 ### Genrate Pipeline Script *(for pipeline project only)*
 
