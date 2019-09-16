@@ -35,7 +35,7 @@ A form appears with several input fields. Now you are ready to configure the plu
 
 #### APIs to Scan
 
-1. The "Select API to Scan" field lists all the API entries you have made to Qualys API Security module. Select the one for which you are want to scan the swagger file. *Please note* that, the APIs are not automatically populated in this dropdown. You should have assessed the swagger file through the API Security module on the Qualys UI at least once before. 
+1. The "Select API to Scan" field lists all the API entries you have made to Qualys API Security module. Select the one for which you want to scan the swagger file. *Please note* that, the APIs are not automatically populated in this dropdown. You should have assessed the swagger file through the API Security module on the Qualys UI at least once before. 
 2. In "Swagger file path" field, provide path to your swagger file relative to Jenkins' workspace directory for your project. 
 
 #### Pass/Fail Criteria
