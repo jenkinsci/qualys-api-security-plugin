@@ -6,7 +6,7 @@
 <l:side-panel class="padding0">
 	<div class="left-panel-container">
 		<div class="qualys_logo">
-			<img src="${resURL}/plugin/QualysAPISecurityPlugin/images/logo.png"/>
+			<img src="${resURL}/plugin/qualys-api-security/images/logo.png"/>
 		</div>
 	
 		<div class="left-pill-item summary selected">
@@ -19,29 +19,29 @@
 </l:side-panel>
  
 <l:main-panel>
-	<script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/jquery/js/jquery-2.1.4.min.js"></script>
-	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/datatable/js/jquery.dataTables.min.js"></script>
-	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/jquery/js/chart.min.js"></script>
-	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/js/report.js"></script>
-	 <script type="text/javascript" src="${resURL}/plugin/QualysAPISecurityPlugin/jquery/js/chart-1.0.1.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="${resURL}/plugin/QualysAPISecurityPlugin/css/style.css" />
-	<link href="${resURL}/plugin/QualysAPISecurityPlugin/datatable/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css"/>
+	<script type="text/javascript" src="${resURL}/plugin/qualys-api-security/jquery/js/jquery-2.1.4.min.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/qualys-api-security/datatable/js/jquery.dataTables.min.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/qualys-api-security/jquery/js/chart.min.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/qualys-api-security/js/report.js"></script>
+	 <script type="text/javascript" src="${resURL}/plugin/qualys-api-security/jquery/js/chart-1.0.1.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="${resURL}/plugin/qualys-api-security/css/style.css" />
+	<link href="${resURL}/plugin/qualys-api-security/datatable/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css"/>
 	
 	<style>
 	 	.status-icon.not-configured{
-		     background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/dash.png') no-repeat center center;
+		     background: url('${resURL}/plugin/qualys-api-security/images/dash.png') no-repeat center center;
 			 background-size: contain;
 			 text-align: -webkit-center;
 			 text-align: center;
 		}
 		
 		.status-icon.ok{
-			background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/ok.png') no-repeat center center;
+			background: url('${resURL}/plugin/qualys-api-security/images/ok.png') no-repeat center center;
 	    	background-size: contain;
 	    	height:20px;
 		}
 		.status-icon.fail{
-			background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/fail.png') no-repeat center center;
+			background: url('${resURL}/plugin/qualys-api-security/images/fail.png') no-repeat center center;
 			background-size: contain;
 		}
 		
@@ -68,11 +68,11 @@
 		}
 		
 		td.details-control {
-		    background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/details_open.png') no-repeat center center;
+		    background: url('${resURL}/plugin/qualys-api-security/images/details_open.png') no-repeat center center;
 		    cursor: pointer;
 		}
 		tr.shown td.details-control {
-		    background: url('${resURL}/plugin/QualysAPISecurityPlugin/images/details_close.png') no-repeat center center;
+		    background: url('${resURL}/plugin/qualys-api-security/images/details_close.png') no-repeat center center;
 		}
 		
 	 </style>

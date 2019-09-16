@@ -582,7 +582,7 @@ public class APISecurityNotifier extends Builder {
         }
         
         @POST
-        public ListBoxModel doFillProxyCredentialsItems(@AncestorInPath Item item, @QueryParameter String credsId) {
+        public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
         	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
             StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
@@ -622,7 +622,7 @@ public class APISecurityNotifier extends Builder {
               model = reader.read(
                 new InputStreamReader(
                 		APISecurityNotifier.class.getResourceAsStream(
-                    "/META-INF/maven/com.qualys.plugins/QualysAPISecurityPlugin/pom.xml"
+                    "/META-INF/maven/com.qualys.plugins/qualys-api-security/pom.xml"
                   )
                 )
               );

@@ -590,7 +590,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         }
         
         @POST
-        public ListBoxModel doFillProxyCredentialsItems(@AncestorInPath Item item, @QueryParameter String credsId) {
+        public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
         	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
