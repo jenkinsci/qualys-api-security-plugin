@@ -108,8 +108,8 @@
 		    	<f:entry title="Proxy Port:" default="80" field="proxyPort" help="/plugin/QualysAPISecurityPlugin/help/proxyPort.html">
 		        	<f:textbox style="width: 15%; min-width: 80px;" id="proxyPort" />
 		    	</f:entry>
-		    	<f:entry field="proxyCredentials" title=" ${%Credentials}" help="/plugin/QualysAPISecurityPlugin/help/proxyCredentials.html">
-					<c:select id="proxyCredentials" />
+		    	<f:entry field="proxyCredentialsId" title=" ${%Credentials}" help="/plugin/QualysAPISecurityPlugin/help/proxyCredentialsId.html">
+					<c:select id="proxyCredentialsId" />
 				</f:entry>
 		    </div></f:block> 
 	    </f:optionalBlock>

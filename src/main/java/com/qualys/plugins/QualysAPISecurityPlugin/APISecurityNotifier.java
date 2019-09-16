@@ -60,7 +60,6 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import hudson.util.Secret;
 import hudson.util.ListBoxModel.Option;
 import jenkins.model.Jenkins;
 import hudson.tasks.Builder;
@@ -74,7 +73,7 @@ public class APISecurityNotifier extends Builder {
     private String apiId;
     private String proxyServer;
     private int proxyPort = PROXY_PORT;
-    private String proxyCredentials;
+    private String proxyCredentialsId;
     private boolean useProxy = false;
     private String swaggerPath;
     private String newAppName;
@@ -139,10 +138,10 @@ public class APISecurityNotifier extends Builder {
 		this.proxyPort = proxyPort;
 	}
 	
-	public String getProxyCredentials() { return proxyCredentials; }
+	public String getProxyCredentials() { return proxyCredentialsId; }
 
 	@DataBoundSetter
-	public void setProxyCredentials(String proxyCredentials) { this.proxyCredentials = proxyCredentials; }
+	public void setProxyCredentialsId(String proxyCredentialsId) { this.proxyCredentialsId = proxyCredentialsId; }
 	
 	public boolean getUseProxy() { return useProxy; }
 
@@ -292,7 +291,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
-        		@QueryParameter String proxyPort, @QueryParameter String proxyCredentials, @QueryParameter boolean useProxy) {
+        		@QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, @QueryParameter boolean useProxy) {
         	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	StandardListBoxModel model = new StandardListBoxModel();
         	try {
@@ -325,14 +324,14 @@ public class APISecurityNotifier extends Builder {
                 	
                 	String proxyUsername = "";
                 	String proxyPassword = "";
-                	if (StringUtils.isNotEmpty(proxyCredentials)) {
+                	if (StringUtils.isNotEmpty(proxyCredentialsId)) {
 
                         StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
                                         StandardUsernamePasswordCredentials.class,
                                         item,
                                         null,
                                         Collections.<DomainRequirement>emptyList()),
-                                CredentialsMatchers.withId(proxyCredentials));
+                                CredentialsMatchers.withId(proxyCredentialsId));
 
                         proxyUsername = (c != null ? c.getUsername() : "");
                         proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
@@ -377,7 +376,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public FormValidation doCheckConnection(@QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId,
-        		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentials, 
+        		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, 
         		@QueryParameter boolean useProxy, @AncestorInPath Item item) {
 
         	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
@@ -410,14 +409,14 @@ public class APISecurityNotifier extends Builder {
         		QualysAuth auth = new QualysAuth();
             	auth.setQualysCredentials(server, apiUser, apiPass);
             	
-        		if (StringUtils.isNotEmpty(proxyCredentials)) {
+        		if (StringUtils.isNotEmpty(proxyCredentialsId)) {
 
                     StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
                                     StandardUsernamePasswordCredentials.class,
                                     item,
                                     null,
                                     Collections.<DomainRequirement>emptyList()),
-                            CredentialsMatchers.withId(proxyCredentials));
+                            CredentialsMatchers.withId(proxyCredentialsId));
 
                     proxyUsername = (c != null ? c.getUsername() : "");
                     proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
@@ -728,13 +727,13 @@ public class APISecurityNotifier extends Builder {
     	QualysAuth auth = new QualysAuth();
     	auth.setQualysCredentials(apiServer, apiUser, apiPass);
     	if(useProxy) {
-    		if (StringUtils.isNotEmpty(proxyCredentials)) {
+    		if (StringUtils.isNotEmpty(proxyCredentialsId)) {
     			StandardUsernamePasswordCredentials credential = CredentialsMatchers.firstOrNull(
     					CredentialsProvider.lookupCredentials(
     							StandardUsernamePasswordCredentials.class,
     							project, ACL.SYSTEM,
     							URIRequirementBuilder.fromUri(apiServer).build()),
-    					CredentialsMatchers.withId(proxyCredentials));
+    					CredentialsMatchers.withId(proxyCredentialsId));
     			
     			if (credential != null) {
     				proxyUsername = (credential != null ? credential.getUsername() : "");
