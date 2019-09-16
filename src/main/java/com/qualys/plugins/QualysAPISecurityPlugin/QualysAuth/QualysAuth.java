@@ -63,13 +63,6 @@ public class QualysAuth {
         this.password = Secret.fromString(password);
     }
     
-    public void setProxyCredentials(String proxyServer, int proxyPort, String proxyUsername, Secret proxyPassword) {
-    	this.proxyServer = proxyServer;
-        this.proxyUsername = proxyUsername;
-        this.proxyPassword = proxyPassword;
-        this.proxyPort = proxyPort;
-    }
-    
     public void setProxyCredentials(String proxyServer, int proxyPort, String proxyUsername, String proxyPassword) {
     	this.proxyServer = proxyServer;
         this.proxyUsername = proxyUsername;

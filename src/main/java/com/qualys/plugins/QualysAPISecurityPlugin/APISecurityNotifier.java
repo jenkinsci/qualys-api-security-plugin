@@ -292,11 +292,11 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
-        		@QueryParameter String proxyPort, @QueryParameter String proxyUsername, @QueryParameter String proxyPassword, @QueryParameter boolean useProxy) {
+        		@QueryParameter String proxyPort, @QueryParameter String proxyCredentials, @QueryParameter boolean useProxy) {
         	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
         	StandardListBoxModel model = new StandardListBoxModel();
         	try {
-        		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer, proxyPort, proxyUsername, proxyPassword)) {
+        		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer)) {
         			int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
                 	
                 	String apiUser = "";
@@ -322,6 +322,21 @@ public class APISecurityNotifier extends Builder {
                     }
             		QualysAuth auth = new QualysAuth();
                 	auth.setQualysCredentials(server, apiUser, apiPass);
+                	
+                	String proxyUsername = "";
+                	String proxyPassword = "";
+                	if (StringUtils.isNotEmpty(proxyCredentials)) {
+
+                        StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
+                                        StandardUsernamePasswordCredentials.class,
+                                        item,
+                                        null,
+                                        Collections.<DomainRequirement>emptyList()),
+                                CredentialsMatchers.withId(proxyCredentials));
+
+                        proxyUsername = (c != null ? c.getUsername() : "");
+                        proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
+                    }
                 	if(useProxy) {
                     	//int proxyPortInt = Integer.parseInt(proxyPort);
                     	auth.setProxyCredentials(proxyServer, proxyPortInt, proxyUsername, proxyPassword);
@@ -344,7 +359,7 @@ public class APISecurityNotifier extends Builder {
         	return model.withEmptySelection();
         }
         
-        public boolean isFilledInputs(String platform, String apiServer, String credsId, boolean useProxy, String proxyServer, String proxyPort, String proxyUsername, String proxyPassword) {
+        public boolean isFilledInputs(String platform, String apiServer, String credsId, boolean useProxy, String proxyServer) {
 			if(platform.equalsIgnoreCase("pcp") && StringUtils.isBlank(apiServer)) return false;
         	if(StringUtils.isBlank(credsId)) return false;
 			if(useProxy && StringUtils.isBlank(proxyServer)) return false;
