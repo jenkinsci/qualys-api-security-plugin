@@ -582,23 +582,23 @@ public class APISecurityNotifier extends Builder {
         }
         
         @POST
-        public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
+        public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String proxyCredentialsId) {
         	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
             StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
-                	return result.add(credsId);
+                	return result.add(proxyCredentialsId);
                 }
             } else {
             	if (!item.hasPermission(Item.EXTENDED_READ)
                         && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
-                	return result.add(credsId);
+                	return result.add(proxyCredentialsId);
                 }
             }
             return result
                     .withEmptySelection()
                     .withAll(CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, item, null, Collections.<DomainRequirement>emptyList()))
-                    .withMatching(CredentialsMatchers.withId(credsId));
+                    .withMatching(CredentialsMatchers.withId(proxyCredentialsId));
         }
 
 		@Override
