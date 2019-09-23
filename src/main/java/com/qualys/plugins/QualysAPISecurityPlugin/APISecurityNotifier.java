@@ -271,7 +271,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillCredsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
@@ -292,7 +292,7 @@ public class APISecurityNotifier extends Builder {
         @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
         		@QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, @QueryParameter boolean useProxy) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	StandardListBoxModel model = new StandardListBoxModel();
         	try {
         		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer)) {
@@ -379,7 +379,7 @@ public class APISecurityNotifier extends Builder {
         		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, 
         		@QueryParameter boolean useProxy, @AncestorInPath Item item) {
 
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	try {
             	int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
             	
@@ -539,7 +539,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillPlatformItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
         	for(Map<String, String> platform: getPlatforms()) {
         		Option e = new Option(platform.get("name"), platform.get("code"));
@@ -550,7 +550,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillSecurityCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -561,7 +561,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillDataCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -572,7 +572,7 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillValidationCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -582,23 +582,23 @@ public class APISecurityNotifier extends Builder {
         }
         
         @POST
-        public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String proxyCredentialsId) {
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
             StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
-                	return result.add(credsId);
+                	return result.add(proxyCredentialsId);
                 }
             } else {
             	if (!item.hasPermission(Item.EXTENDED_READ)
                         && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
-                	return result.add(credsId);
+                	return result.add(proxyCredentialsId);
                 }
             }
             return result
                     .withEmptySelection()
                     .withAll(CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, item, null, Collections.<DomainRequirement>emptyList()))
-                    .withMatching(CredentialsMatchers.withId(credsId));
+                    .withMatching(CredentialsMatchers.withId(proxyCredentialsId));
         }
 
 		@Override
