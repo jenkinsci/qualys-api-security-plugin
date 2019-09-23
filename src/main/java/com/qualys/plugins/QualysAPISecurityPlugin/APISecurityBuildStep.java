@@ -293,7 +293,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         
         @POST
         public ListBoxModel doFillCredsIdItems(@AncestorInPath Item item, @QueryParameter String credsId) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
@@ -314,7 +314,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
         		@QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, @QueryParameter boolean useProxy) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	StandardListBoxModel model = new StandardListBoxModel();
         	try {
         		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer)) {
@@ -399,7 +399,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         public FormValidation doCheckConnection(@QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId,
         		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, 
         		@QueryParameter boolean useProxy, @AncestorInPath Item item) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	try {
             	int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
             	
@@ -558,7 +558,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         
         @POST
         public ListBoxModel doFillSecurityCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -569,7 +569,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         
         @POST
         public ListBoxModel doFillDataCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -580,7 +580,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         
         @POST
         public ListBoxModel doFillValidationCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
 	    	for(int i=1; i<=5; i++) {
 	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
@@ -591,7 +591,7 @@ public class APISecurityBuildStep extends AbstractStepImpl {
         
         @POST
         public ListBoxModel doFillProxyCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String proxyCredentialsId) {
-        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
             	if (!Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER)) {
