@@ -138,7 +138,7 @@ public class APISecurityNotifier extends Builder {
 		this.proxyPort = proxyPort;
 	}
 	
-	public String getProxyCredentials() { return proxyCredentialsId; }
+	public String getProxyCredentialsId() { return proxyCredentialsId; }
 
 	@DataBoundSetter
 	public void setProxyCredentialsId(String proxyCredentialsId) { this.proxyCredentialsId = proxyCredentialsId; }
@@ -765,8 +765,8 @@ public class APISecurityNotifier extends Builder {
 		}
     	JsonParser jsonParser = new JsonParser();
     	JsonObject resultObj = jsonParser.parse(result).getAsJsonObject();
-		Helper.createNewFile(artifactsDir,  "qualys_api_assess_result_" + apiId, "", listener.getLogger());
-		Helper.writeArtifactFile(artifactsDir, "qualys_api_assess_result_" + apiId, listener.getLogger(), resultObj);
+		Helper.createNewFile(run.getArtifactsDir(), "qualys_api_assess_result_" + apiId, "", listener.getLogger());
+		Helper.writeArtifactFile(run.getArtifactsDir(), "qualys_api_assess_result_" + apiId, listener.getLogger(), resultObj);
     	if(resultObj != null && !resultObj.get("renderReport").isJsonNull() && resultObj.get("renderReport").getAsBoolean()) {
 			ReportAction reportAction = new ReportAction(run, apiId, portalUrl, swaggerPath);
 			run.addAction(reportAction);
