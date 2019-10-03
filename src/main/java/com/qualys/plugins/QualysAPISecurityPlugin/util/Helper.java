@@ -73,11 +73,15 @@ public class Helper {
     	platformsList = Collections.unmodifiableMap(aList);
     }
     
-    public static void createNewFile(String rootDir, String filename, String content, PrintStream buildLogger) {
+    public static void createNewFile(File rootDir, String filename, String content, PrintStream buildLogger) throws Exception {
 	  	   	
-    	File f = new File(rootDir + File.separator + filename + ".json");
+    	File f = new File(rootDir.getAbsolutePath() + File.separator + filename + ".json");
 	    if(!f.getParentFile().exists()){
 	        f.getParentFile().mkdirs();
+	    }
+	    
+	    if(!f.getCanonicalPath().startsWith(rootDir.getCanonicalPath())) {
+	    	throw new Exception("Can not create file due to security reasons. Suspecious filename - "+ f.getCanonicalPath() + ".");
 	    }
 
 	    if(!f.exists()){
@@ -99,10 +103,12 @@ public class Helper {
 	    }
     }
     
-    public static void writeArtifactFile(String rootDir, String filename, PrintStream buildLogger,	JsonObject evalresult) throws IOException {
+    public static void writeArtifactFile(File rootDir, String filename, PrintStream buildLogger,	JsonObject evalresult) throws Exception {
 		Gson gson = new Gson();
-		File f = new File(rootDir + File.separator + filename + ".json");
-		
+		File f = new File(rootDir.getAbsolutePath() + File.separator + filename + ".json");
+		if(!f.getCanonicalPath().startsWith(rootDir.getCanonicalPath())) {
+	    	throw new Exception("Can not write file due to security reasons. Suspecious filename - "+ f.getCanonicalPath() + ".");
+	    }
 		if(f.exists()){
     		String contentStr = FileUtils.readFileToString(f);
     		JsonObject respObj = gson.fromJson(contentStr, JsonObject.class);

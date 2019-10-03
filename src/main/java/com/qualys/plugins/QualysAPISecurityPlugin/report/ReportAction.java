@@ -85,7 +85,7 @@ public class ReportAction implements Action {
     		String filename = run.getArtifactsDir().getAbsolutePath() + File.separator + "qualys_api_assess_result_" + apiId + ".json";
         	File f = new File(filename);
         	Gson gson = new Gson();
-        	if(f.exists()){
+        	if(f.getCanonicalPath().startsWith(run.getArtifactsDir().getCanonicalPath()) && f.exists()){
         		String resultStr = FileUtils.readFileToString(f);
 	    		respObj = gson.fromJson(resultStr, JsonObject.class);
 	    		
