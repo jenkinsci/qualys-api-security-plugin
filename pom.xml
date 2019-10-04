@@ -100,4 +100,10 @@
   
 </dependencies>
 
+<scm>
+	<connection>scm:git:ssh://github.com/jenkinsci/qualys-api-security-plugin.git</connection>
+	<developerConnection>scm:git:ssh://git@github.com/jenkinsci/qualys-api-security-plugin.git</developerConnection>
+	<url>https://github.com/jenkinsci/qualys-api-security-plugin</url>
+</scm>
+
 </project>
