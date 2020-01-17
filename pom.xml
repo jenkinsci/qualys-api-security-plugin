@@ -44,6 +44,7 @@
 
   <name>Qualys API Security Plugin</name>
   <description>The Qualys API Security Plugin for Jenkins empowers you to assess API in their existing CI/CD processes with help of Qualys API Security module. Integrating this assessment step will help you catch and eliminate API related flaws. This plugin supports pipeline as well as free-style projects.</description>
+  <url>https://github.com/jenkinsci/qualys-api-security-plugin</url>
 
   <licenses>
     <license>
