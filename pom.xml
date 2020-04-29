@@ -10,7 +10,7 @@
   </parent>
   <groupId>com.qualys.plugins</groupId>
   <artifactId>qualys-api-security</artifactId>
-  <version>2.0</version>
+  <version>2.1-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <properties>
@@ -104,7 +104,7 @@
 	<connection>scm:git:ssh://github.com/jenkinsci/qualys-api-security-plugin.git</connection>
 	<developerConnection>scm:git:ssh://git@github.com/jenkinsci/qualys-api-security-plugin.git</developerConnection>
 	<url>https://github.com/jenkinsci/qualys-api-security-plugin</url>
-  <tag>qualys-api-security-2.0</tag>
+  <tag>HEAD</tag>
   </scm>
 
 </project>
