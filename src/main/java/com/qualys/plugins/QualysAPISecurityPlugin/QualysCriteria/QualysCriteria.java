@@ -3,13 +3,17 @@ package com.qualys.plugins.QualysAPISecurityPlugin.QualysCriteria;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import com.qualys.plugins.QualysAPISecurityPlugin.util.Helper;
+import com.qualys.plugins.QualysAPISecurityPlugin.util.Severity;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang.ArrayUtils;
 
 public class QualysCriteria {
 	ArrayList<String> failedReasons  = new ArrayList<>(0);
@@ -19,7 +23,11 @@ public class QualysCriteria {
 	private boolean isGradeConfigured = false;
 	private boolean isGroupCriticalityConfigured = false;
 	private JsonObject groupCriticalityConfig;
-	private HashMap<String, HashMap<String, Integer>> groupCriticalityCounts;
+	private Map<String, Map<String, Integer>> groupCriticalityCounts;
+	Map<String,Integer> securityCountMap;
+	Map<String,Integer> dataCountMap;
+	Map<String,Integer> oasCountMap;
+	String[] sevArray = {"Low","Medium","High"};
 	
 	private final static Logger logger = Helper.getLogger(QualysCriteria.class.getName());
 	
@@ -52,35 +60,21 @@ public class QualysCriteria {
 			if (failConditions.has("groupCriticality") && !failConditions.get("groupCriticality").isJsonNull()) {
 				JsonObject groupCriticalityConf = new JsonObject();
 				JsonObject groupCriticality = failConditions.get("groupCriticality").getAsJsonObject();
-				if (groupCriticality.has("security") && !groupCriticality.get("security").isJsonNull()) {
-					JsonObject conf = new JsonObject();
-					conf.add("found", null);
-					conf.addProperty("result", true);
-					JsonObject configured = groupCriticality.get("security").getAsJsonObject();
-					conf.add("configured", configured);
-					groupCriticalityConf.add("security", conf);
-					isGroupCriticalityConfigured = true;
-					groupCriticalityConfig.add("security", configured);
-				}
-				if (groupCriticality.has("data") && !groupCriticality.get("data").isJsonNull()) {
-					JsonObject conf = new JsonObject();
-					conf.add("found", null);
-					conf.addProperty("result", true);
-					JsonObject configured = groupCriticality.get("data").getAsJsonObject();
-					conf.add("configured", configured);
-					groupCriticalityConf.add("data", conf);
-					isGroupCriticalityConfigured = true;
-					groupCriticalityConfig.add("data", configured);
-				}
-				if (groupCriticality.has("validation") && !groupCriticality.get("validation").isJsonNull()) {
-					JsonObject conf = new JsonObject();
-					conf.add("found", null);
-					conf.addProperty("result", true);
-					JsonObject configured = groupCriticality.get("validation").getAsJsonObject();
-					conf.add("configured", configured);
-					groupCriticalityConf.add("validation", conf);
-					isGroupCriticalityConfigured = true;
-					groupCriticalityConfig.add("validation", configured);
+				String[] fields = {"security" , "data validation", "oas violation"};
+					
+				for(String field: fields)
+				{
+					if (groupCriticality.has(field) && !groupCriticality.get(field).isJsonNull()) {
+						JsonObject conf = new JsonObject();
+						conf.add("found", null);
+						conf.addProperty("result", true);
+						JsonObject configured = groupCriticality.get(field).getAsJsonObject();
+						conf.add("configured", configured);
+						groupCriticalityConf.add(field, conf);
+						isGroupCriticalityConfigured = true;
+						groupCriticalityConfig.add(field, configured);
+					}
+					
 				}
 				returnObject.add("groupCriticality", groupCriticalityConf);
 			}
@@ -90,25 +84,34 @@ public class QualysCriteria {
 	private void setDefaultValues() {
 		this.returnObject = new JsonObject();
 		
-		groupCriticalityCounts = new HashMap<String, HashMap<String, Integer>>();
-		HashMap<String, Integer> counter = new HashMap<String, Integer>();
-		counter.put("1", 0);
-		counter.put("2", 0);
-		counter.put("3", 0);
-		counter.put("4", 0);
-		counter.put("5", 0);
-		groupCriticalityCounts.put("security", counter);
+		securityCountMap = new LinkedHashMap<String,Integer>();
+		dataCountMap = new LinkedHashMap<String,Integer>();
+		oasCountMap = new LinkedHashMap<String,Integer>();
 		
-		Gson gson = new Gson();
-		String jsonString = gson.toJson(counter);
+		for(Severity sev : Severity.values())
+		{
+			securityCountMap.put(sev.getValue(), 0);
+			dataCountMap.put(sev.getValue(), 0);
+			oasCountMap.put(sev.getValue(), 0);	
+		}
+		
+		
+		groupCriticalityCounts = new LinkedHashMap<String, Map<String, Integer>>();
+		
+		groupCriticalityCounts.put("security", securityCountMap);
+		
+		Gson gson = new Gson(); 
+		String jsonString = gson.toJson(securityCountMap);
+		
 		Type type = new TypeToken<HashMap<String, Integer>>(){}.getType();
-		groupCriticalityCounts.put("data", gson.fromJson(jsonString, type));
-		groupCriticalityCounts.put("validation", gson.fromJson(jsonString, type));
+		groupCriticalityCounts.put("data validation", gson.fromJson(jsonString, type));
+		groupCriticalityCounts.put("oas violation", gson.fromJson(jsonString, type));
+		 
 		
 		groupCriticalityConfig = new JsonObject();
 		groupCriticalityConfig.add("security", new JsonObject());
-		groupCriticalityConfig.add("data", new JsonObject());
-		groupCriticalityConfig.add("validation", new JsonObject());
+		groupCriticalityConfig.add("data validation", new JsonObject());
+		groupCriticalityConfig.add("oas violation", new JsonObject());
 	} // setDefaultValues
 
 	public Boolean evaluate(JsonObject response) {
@@ -130,24 +133,42 @@ public class QualysCriteria {
 		}
 		
 		if (response.has("findingIdWiseData") && !response.get("findingIdWiseData").isJsonNull()) {
-			JsonArray findingIds = response.get("findingIdWiseData").getAsJsonArray();
+			JsonArray findingIds = response.get("findingIdWiseData").getAsJsonArray();			
+			
 			for (JsonElement ele : findingIds) {
 				JsonObject obj = ele.getAsJsonObject();
+				String group = obj.get("sectionType").getAsString().toLowerCase();
 				if(obj.has("findings") && !obj.get("findings").isJsonNull()) {
 					JsonArray findings = obj.get("findings").getAsJsonArray();
 					for (JsonElement findingEle : findings) {
 						JsonObject findingObj = findingEle.getAsJsonObject();
 						//calculate for groupCriticality
-						String group = findingObj.get("group").getAsString().toLowerCase();
 						String criticalityFound = findingObj.get("criticality").getAsString();
-						if(groupCriticalityCounts.containsKey(group) && groupCriticalityCounts.get(group) != null) {
-							int count = groupCriticalityCounts.get(group).get(criticalityFound);
-							count++;
-							groupCriticalityCounts.get(group).put(criticalityFound, count);
+						if(groupCriticalityCounts.containsKey(group) && groupCriticalityCounts.get(group) != null) 
+						{
+							criticalityFound = Helper.criticalityToSeverity(Integer.parseInt(criticalityFound));
+							
+							if(group.equals("security") && securityCountMap.containsKey(criticalityFound))
+							{
+								securityCountMap.put(criticalityFound,securityCountMap.get(criticalityFound) +1);
+							}
+							if(group.equals("data validation") && dataCountMap.containsKey(criticalityFound))
+							{
+								dataCountMap.put(criticalityFound,dataCountMap.get(criticalityFound) +1);
+							}
+							if(group.equals("oas violation") && oasCountMap.containsKey(criticalityFound))
+							{
+								oasCountMap.put(criticalityFound,oasCountMap.get(criticalityFound) +1);
+							}
 						}
 					}
 				}
 			}
+			
+			groupCriticalityCounts.put("security",securityCountMap);
+			groupCriticalityCounts.put("data validation",dataCountMap);
+			groupCriticalityCounts.put("oas violation",oasCountMap);
+			
 			Gson gson = new Gson();
 			returnObject.add("groupCriticalityCounts", gson.fromJson(gson.toJson(groupCriticalityCounts), JsonObject.class));
 			//evaluate for groupCriticality
@@ -160,9 +181,8 @@ public class QualysCriteria {
 					if(countObj!= null && !countObj.isJsonNull()) {
 						String countStr = countObj.getAsString();
 						int countConfigured = Integer.parseInt(countStr);
-						String criticalityConfigured = obj.get("criticality").getAsString();
-						int criticalityConfiguredInt = Integer.parseInt(criticalityConfigured);
-						
+						String criticalityConfigured = obj.get("severity").getAsString();
+
 						//default values
 						JsonObject conf = new JsonObject();
 						conf.addProperty("found", 0);
@@ -174,14 +194,18 @@ public class QualysCriteria {
 						
 						//evaluate
 						int countFound = 0;
-						for(int i=criticalityConfiguredInt; i<=5; i++) {
-							countFound += groupCriticalityCounts.get(group).get(Integer.toString(i));
+						if(groupCriticalityCounts.containsKey(group))
+						{
+							 for(int i=ArrayUtils.indexOf(sevArray, criticalityConfigured); i<3;i++)
+							 {
+								 countFound += groupCriticalityCounts.get(group).get(sevArray[i]);
+							 }
 						}
 						conf.addProperty("found", countFound);
 						if(countFound > countConfigured) {
 							status = false;
 							conf.addProperty("result", false);
-							failedReasons.add("Failing the build because no. of findings for '"+ group + "' with criticality more than or equals to "+ criticalityConfigured + "; configured: " + countStr + ", Found: " + countFound);
+							failedReasons.add("Failing the build because the number of issues found for '"+ group.toUpperCase() +"' with Severity: '"+ criticalityConfigured +" or above' is more than the configured count ; Configured: " + countStr + ", Found: " + countFound);
 						}
 						result.add(group, conf);
 					}
@@ -197,6 +221,5 @@ public class QualysCriteria {
 	public ArrayList<String> getBuildFailedReasons() {
 		return (ArrayList<String>) this.failedReasons.stream().distinct().collect(Collectors.toList());
     }	
-	
-	
+		
 }

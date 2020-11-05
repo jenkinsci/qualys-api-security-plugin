@@ -1,43 +1,49 @@
 package com.qualys.plugins.QualysAPISecurityPlugin.util;
 
-public class ValidateParameters {
-	public static void validateFloat(String score) throws InvalidConfigurationExcetpion {
+public class ValidateParameters 
+{
+	public static void validateFloat(String score) throws InvalidConfigurationException {
 		if(score == null) {
-			throw new InvalidConfigurationExcetpion();
+			throw new InvalidConfigurationException();
 		}
 		try {
 			float num = Float.parseFloat(score);
-		}catch(Exception e) {
-			throw new InvalidConfigurationExcetpion();
+			if(num > 100.00 || num < 0.00)
+			{
+				throw new InvalidConfigurationException();
+			}
+		}
+		catch(Exception e) {
+			throw new InvalidConfigurationException();
 		}
 	}
 	
-	public static void validateCriticalityNumber(String score) throws InvalidConfigurationExcetpion {
-		if(score == null) {
-			throw new InvalidConfigurationExcetpion();
+	public static void validateSeverity(String sev) throws InvalidConfigurationException {
+		boolean found = false;
+		if(sev == null) {
+			throw new InvalidConfigurationException();
 		}
 		try {
-			float num = Integer.parseInt(score);
-			if(num < 1 || num > 5) {
-				throw new InvalidConfigurationExcetpion();
+			if(!Severity.containsValue(sev)) {
+				throw new InvalidConfigurationException();
 			}
 		}catch(Exception e) {
 			e.printStackTrace();
-			throw new InvalidConfigurationExcetpion();
+			throw new InvalidConfigurationException();
 		}
 	}
 	
-	public static void validateGroupCountNumber(String score) throws InvalidConfigurationExcetpion {
-		if(score == null) {
-			throw new InvalidConfigurationExcetpion();
+	public static void validateGroupCountNumber(String count) throws InvalidConfigurationException {
+		if(count == null) {
+			throw new InvalidConfigurationException();
 		}
 		try {
-			float num = Integer.parseInt(score);
+			float num = Integer.parseInt(count);
 			if(num < 0) {
-				throw new InvalidConfigurationExcetpion();
+				throw new InvalidConfigurationException();
 			}
 		}catch(Exception e) {
-			throw new InvalidConfigurationExcetpion();
+			throw new InvalidConfigurationException();
 		}
 	}
 }

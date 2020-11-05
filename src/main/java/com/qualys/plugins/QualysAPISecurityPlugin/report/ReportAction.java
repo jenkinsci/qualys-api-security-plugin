@@ -78,14 +78,13 @@ public class ReportAction implements Action {
 	}
 	
 	
-	
 	public void setResult() {
     	JsonObject respObj;
     	try {
     		String filename = run.getArtifactsDir().getAbsolutePath() + File.separator + "qualys_api_assess_result_" + apiId + ".json";
         	File f = new File(filename);
         	Gson gson = new Gson();
-        	if(f.getCanonicalPath().startsWith(run.getArtifactsDir().getCanonicalPath()) && f.exists()){
+        	if(f!=null && f.exists() && f.getCanonicalPath().startsWith(run.getArtifactsDir().getCanonicalPath())){
         		String resultStr = FileUtils.readFileToString(f);
 	    		respObj = gson.fromJson(resultStr, JsonObject.class);
 	    		
@@ -98,8 +97,8 @@ public class ReportAction implements Action {
     			
     			//set values
     			grade = (ele.has("grade") && !ele.get("grade").isJsonNull()) ? ele.get("grade").getAsString() : "-";
-    			swaggerState = (ele.has("swaggerState") && !ele.get("swaggerState").isJsonNull()) ? ele.get("swaggerState").getAsString() : "-";
-    			criticality = (ele.has("criticality") && !ele.get("criticality").isJsonNull()) ? ele.get("criticality").getAsString() : "-";
+    			swaggerState = (ele.has("swaggerState") && !ele.get("swaggerState").isJsonNull()) ? (ele.get("swaggerState").getAsString().equals("valid")?"Passed":"Failed") : "Failed";
+    			criticality = (ele.has("criticality") && !ele.get("criticality").isJsonNull()) ? Helper.criticalityToSeverity(ele.get("criticality").getAsInt()) : "-";
     			issueCounter = (ele.has("issueCounter") && !ele.get("issueCounter").isJsonNull()) ? ele.get("issueCounter").getAsString() : "-";
     			JsonObject sectionWiseObj = (ele.has("sectionWiseIssueCount") && !ele.get("sectionWiseIssueCount").isJsonNull()) ? ele.get("sectionWiseIssueCount").getAsJsonObject() : new JsonObject();
     			JsonObject buildEvalObj= (ele.has("buildEvaluationResult") && !ele.get("buildEvaluationResult").isJsonNull()) ? ele.get("buildEvaluationResult").getAsJsonObject() : new JsonObject();
@@ -115,12 +114,12 @@ public class ReportAction implements Action {
 
 	@Override
 	public String getIconFileName() {
-		return "clipboard.png";
+		return "/plugin/qualys-api-security/images/tinyLogo.png";
 	}
 
 	@Override
 	public String getDisplayName() {
-		return "Qualys Static Assessment Report";
+		return "Qualys API Security Assessment Report";
 	}
 
 	@Override

@@ -92,17 +92,17 @@
 										<!-- <tr><td colspan="9" id="summaryTableImageId"> <div class="image-status-flag"></div><span id="summary-image-id"></span> </td></tr> -->
 										<tr class="column-header">
 											<td></td>
-											<td>Grade</td>
-											<td>Security findings</td>
-											<td>Data findings</td>
-											<td>Validation findings</td>
+											<td>Score</td>
+											<td>Security Issues</td>
+											<td>Data Validation Issues</td>
+											<td>OAS Violation Issues</td>
 										</tr>
 										<tr>
 											<td>Criteria Evaluation</td>
 											<td id="grade-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div> </div> </td>
 											<td id="security-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
-											<td id="data-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
-											<td id="validation-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
+											<td id="datavalidation-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
+											<td id="oasviolation-found"><div class="tooltip tooltip-scroll status-icon image-scan-status not-configured"> <div class="wrapper">  <span class="tooltip-text">Not Configured</span> </div></div> </td>
 										</tr>
 									</table>
 								</div>
@@ -124,10 +124,10 @@
 						
 					    <div id="resultContents" class="marginLeft10">
 						    <table>
-						    <tr> <td class="status_header"> Application ID: </td>  <td> ${it.apiId} </td></tr>
-						    <tr> <td class="status_header"> Swagger State: </td>  <td> ${it.swaggerState} </td></tr>
-						    <tr> <td class="status_header"> Grade: </td>  <td> ${it.grade} </td></tr>
-						    <tr> <td class="status_header"> Criticality: </td>  <td> ${it.criticality} </td></tr>
+						    <tr> <td class="status_header"> API ID: </td>  <td id="apiId"> ${it.apiId} </td></tr>
+						    <tr> <td class="status_header"> OAS Compliance: </td>  <td> ${it.swaggerState} </td></tr>
+						    <tr> <td class="status_header"> Score: </td>  <td id="grade"> ${it.grade} </td></tr>
+						    <tr> <td class="status_header"> Overall Severity: </td>  <td> ${it.criticality} </td></tr>
 						    <tr> <td class="status_header"> Total Issues: </td>  <td> ${it.issueCounter} </td></tr>
 						    </table>
 					    </div>
@@ -138,7 +138,7 @@
 					<div class="vulnschart-content">
 						<div class="card-title">Issues (${it.issueCounter})</div>
 						<div class="report-chart-div">
-							<div id="sevVulns-error" style="margin: 92px;">There are no findings!</div>
+							<div id="sevVulns-error" style="margin: 92px;">There are no issues!</div>
 							<canvas id="sevVulns" width="180" height="180" ></canvas>
 							<div id="pie-legend-div" class="chart-legend" ></div>
 						</div>
@@ -149,9 +149,9 @@
 				
 				<div class="card" id="security-vulns-chart" style="display:block"> 
 					<div class="vulnschart-content">
-						<div class="card-title"> Security Findings/Issues (<span id="securityIssuesCount"></span>) </div>
+						<div class="card-title"> Security Issues (<span id="securityIssuesCount"></span>) </div>
 						<div class="report-chart-div">
-							<div id="secVulns-error" style="margin: 92px;">There are no findings!</div>
+							<div id="secVulns-error" style="margin: 92px;">There are no issues!</div>
 							<canvas id="secVulns" width="180" height="180" ></canvas>
 							<div id="security-vulns-legend-div" class="chart-legend" ></div>
 						</div>
@@ -160,9 +160,9 @@
 				
 				<div class="card" id="data-vulns-chart" style="display:block"> 
 					<div class="vulnschart-content">
-						<div class="card-title"> Data Findings/Issues (<span id="dataIssuesCount"></span>) </div>
+						<div class="card-title"> Data Validation Issues (<span id="dataIssuesCount"></span>) </div>
 						<div class="report-chart-div">
-							<div id="dataVulns-error" style="margin: 92px;">There are no findings!</div>
+							<div id="dataVulns-error" style="margin: 92px;">There are no issues!</div>
 							<canvas id="dataVulns" width="180" height="180" ></canvas>
 							<div id="data-vulns-legend-div" class="chart-legend" ></div>
 						</div>
@@ -171,9 +171,9 @@
 				
 				<div class="card" id="validation-vulns-chart" style="display:block"> 
 					<div class="vulnschart-content">
-						<div class="card-title"> Validation Findings/Issues (<span id="validationIssuesCount"></span>) </div>
+						<div class="card-title"> OAS Violation Issues (<span id="validationIssuesCount"></span>) </div>
 						<div class="report-chart-div">
-							<div id="valVulns-error" style="margin: 92px;">There are no findings!</div>
+							<div id="valVulns-error" style="margin: 92px;">There are no issues!</div>
 							<canvas id="valVulns" width="180" height="180" ></canvas>
 							<div id="validation-vulns-legend-div" class="chart-legend" ></div>
 						</div>
@@ -187,7 +187,7 @@
 	</div>
 		
 	<div id="vulnerabilities" class="reports-main-content" style="display: grid;">
-		<div class="summary-title"> QUALYS STATIC ASSESSMENT RESULTS </div>
+		<div class="summary-title"> QUALYS API SECURITY ASSESSMENT RESULTS </div>
 		<div id="vulnsTable-content">
 	  		<table id="vulnsTable" class="display" width="100%"></table>
 	   	</div>
@@ -212,11 +212,31 @@
 				}
 			}
 		});
+		
+		// this check is use for check Jenkins version 2.235 or greater version.
+		// Jenkins version 2.235 or greater than this version contains page-header class.
+		if (document.getElementsByClassName('page-header')[0] != undefined) {
+			document.getElementById("side-panel").style.marginTop = "30px";
+		}
+
+		if(jQuery("#apiId").text() == "")
+		{
+			jQuery("#apiId").parent().hide();
+		}
+		
+		if(jQuery("#grade").text() != "")
+		{
+			var score = parseFloat(jQuery("#grade").text());
+			var result = score.toFixed(2).toString().concat("%");
+			jQuery("#grade").text(result);
+		}
+		
+		
 		var buildEvaluationResult = ${it.buildEvaluationResult};
 		var sectionWiseIssueCount = ${it.sectionWiseIssueCount};
-		jQuery("#securityIssuesCount").html(sectionWiseIssueCount.SECURITY);
-		jQuery("#dataIssuesCount").html(sectionWiseIssueCount.DATA);
-		jQuery("#validationIssuesCount").html(sectionWiseIssueCount.VALIDATION);
+		jQuery("#securityIssuesCount").html(sectionWiseIssueCount.Security);
+		jQuery("#dataIssuesCount").html(sectionWiseIssueCount["Data Validation"]);
+		jQuery("#validationIssuesCount").html(sectionWiseIssueCount["OAS Violation"]);
 		var findingIdWiseData = ${it.findingIdWiseData};
 		//draw pie chart
 		drawVulnsCharts(sectionWiseIssueCount);

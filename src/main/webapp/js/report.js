@@ -1,7 +1,7 @@
 function drawsverityWiseCharts(result){
 	drawPieChart(result.security, "#secVulns", "#secVulns-error", "#security-vulns-legend-div");
-	drawPieChart(result.data, "#dataVulns", "#dataVulns-error", "#data-vulns-legend-div");
-	drawPieChart(result.validation, "#valVulns", "#valVulns-error", "#validation-vulns-legend-div");
+	drawPieChart(result["data validation"], "#dataVulns", "#dataVulns-error", "#data-vulns-legend-div");
+	drawPieChart(result["oas violation"], "#valVulns", "#valVulns-error", "#validation-vulns-legend-div");
 }
 
 function drawPieChart(data, canvas_id, error_div, lgend_div){
@@ -28,13 +28,13 @@ function drawPieChart(data, canvas_id, error_div, lgend_div){
 		    percentageInnerCutout: 50,
 		    tooltipTemplate: "<%= label %>"
 		}
-		var colors = ["#E8E4AE", "#F4BB48", "#FAA23B", "#DE672A","#D61E1C"];
+		var colors = ["#E8E4AE", "#FAA23B", "#D61E1C"];
 		var labels = count; 
 		if(! count.some(el => el !== 0)){
-			count = ["1", "1", "1", "1", "1"];
-			severity = ["1", "2", "3", "4", "5"];
-			labels = ["0", "0", "0", "0", "0"];	
-			colors = ["#B0BFc6", "#B0BFc6", "#B0BFc6", "#B0BFc6", "#B0BFc6"];
+			count = ["1", "1", "1"];
+			severity = ["Low", "Medium", "High"];
+			labels = ["0", "0", "0"];	
+			colors = ["#B0BFc6", "#B0BFc6", "#B0BFc6"];
 		}
 		
 		var c = jQuery(canvas_id).get(0);
@@ -42,29 +42,19 @@ function drawPieChart(data, canvas_id, error_div, lgend_div){
 		
 			var pieData = [
 				{
-				value: count[4].toString(),
-				label: "Criticality " + severity[4].toString() + " (" + labels[4] + ")",
-				color: colors[4]
+					value: count[0].toString(),
+					label: severity[0].toString() + " Severity  (" + labels[0] + ")",
+					color: colors[0]
 				},
 				{
-				value: count[3].toString(),
-				label: "Criticality " + severity[3].toString() + " (" + labels[3] + ")",
-				color: colors[3]
+					value: count[1].toString(),
+					label: severity[1].toString() + " Severity (" + labels[1] + ")",
+					color: colors[1]
 				},
 				{
-				value: count[2].toString(),
-				label: "Criticality " + severity[2].toString() + " (" + labels[2] + ")",
-				color: colors[2]
-				},
-				{
-				value: count[1].toString(),
-				label: "Criticality " + severity[1].toString() + " (" + labels[1] + ")",
-				color: colors[1]
-				},
-				{
-				value: count[0].toString(),
-				label: "Criticality " + severity[0].toString() + " (" + labels[0] + ")",
-				color: colors[0]
+					value: count[2].toString(),
+					label: severity[2].toString() + " Severity  (" + labels[2] + ")",
+					color: colors[2]
 				}
 			];
 			
@@ -98,7 +88,7 @@ function drawVulnsCharts(scanResults){
 		    percentageInnerCutout: 50,
 		    tooltipTemplate: "<%= label %>"
 		}
-		var colors = ["#D61E1C", "#DE672A", "#FAA23B", "#F4BB48","#E8E4AE"];
+		var colors = ["#34c4f2","#1f568d", "#ffe5c8"]
 		var labels = count; 
 		
 		var c = jQuery("#sevVulns").get(0);
@@ -126,17 +116,19 @@ function updateSummaryTable(evaluationResult){
 		if(gradeObj){
 			if(gradeObj.configured != null || gradeObj.configured != undefined){
 				jQuery("#grade-found .image-scan-status").removeClass("not-configured").addClass(gradeObj.result ? "ok" : "fail");
-				jQuery("#grade-found .image-scan-status .tooltip-text").html("<b>configured:</b> "+gradeObj.configured + "<br /><b>Found: </b>"+ (gradeObj.found ? gradeObj.found : "None"));
+				jQuery("#grade-found .image-scan-status .tooltip-text").html("<b>Configured:</b> "+gradeObj.configured + "<br /><b>Found: </b>"+ (gradeObj.found ? gradeObj.found : "None"));
 			}
 		}
 		var groupCriticality = result.groupCriticality;
-		var groups = ["security", "data", "validation"];
+		var groups = ["security", "data validation", "oas violation"];
 		if(groupCriticality){
 			groups.forEach(function(group){
 				groupObj = groupCriticality[group];
-				if(groupObj && (groupObj.configured != null || groupObj.configured != undefined)){
+				if(groupObj && (groupObj.configured != null || groupObj.configured != undefined))
+				{
+					group = group.replace(/ /g, "");
 					jQuery("#"+ group +"-found .image-scan-status").removeClass("not-configured").addClass(groupObj.result ? "ok" : "fail");
-					jQuery("#"+ group +"-found .image-scan-status .tooltip-text").html("<b>configured count:</b> "+groupObj.configured.count + " with criticality "+ groupObj.configured.criticality +" or more.<br /><b>Found: </b>"+ (groupObj.found ? groupObj.found : "None"));
+					jQuery("#"+ group +"-found .image-scan-status .tooltip-text").html("<b>Configured count:</b> "+groupObj.configured.count + " with severity "+ groupObj.configured.criticality +" or above.<br /><b>Found: </b>"+ (groupObj.found ? groupObj.found : "None"));
 				}
 			})
 		}
@@ -154,13 +146,19 @@ function showVulnsTable(vulns){
         "aaData": vulns,
         "aoColumns":[
         	{ "className": 'details-control', "orderable": false, "data":null, "defaultContent": '', "width": "3%"},
-            { "mData": "findingKey", sDefaultContent :  '', "width": "50%"},
+        	{ "mData": "qid", sDefaultContent :  '', "width": "20%"},
+            { "mData": "findings", sDefaultContent :  '', "width": "50%"},
             { "mData": "findings", sDefaultContent :  '', "width": "20%"}
         ],
         'aoColumnDefs': [
         	{ "sTitle": "", "aTargets": [0] },
-            { "sTitle": "Finding Key", "aTargets": [1] },
-            { "sTitle": "Total Issues", "aTargets": [2],
+        	{ "sTitle": "QID", "aTargets": [1] },
+        	{ "sTitle": "Finding Key", "aTargets": [2],
+                "render" : function( data, type, row){
+                	var findingkey = row.type;
+                		return findingkey;
+            }},
+            { "sTitle": "Total Issues", "aTargets": [3],
             	"render":  function ( data, type, row ) {
         			var count = data.length;
             		return count;
@@ -188,14 +186,86 @@ function showVulnsTable(vulns){
 	function format ( d ) {
 		
 	    var table = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">'+
-		    '<tr><th>Path</th><th style="width:65px;">Criticality</th><th style="width:80px;">Fix Impact</th><th>Description</th></tr>';
+		    '<tr><th style="width:30px;">Path</th><th style="width:50px;">Severity</th><th style="width:60px;">Fix Impact</th><th style="width:150px;">Description</th><th style="width:240px;">Pointer Location (Column, Row, Position)</th><th style="width:20px;">Fix Recommendation</th></tr>';
+	    
+	    var fixedRecommendation;
+	    var jsonData;
+	    if(d.fixRecommendation)
+	    {
+	    	 jsonData = JSON.parse(d.fixRecommendation);
+	    }
+	  
 	    
 	    d.findings.forEach(function(finding, index){
+	    	var htmlString="";
+            for (var i = 0; i < jsonData.sections.length; i++) 
+            {
+                var section = jsonData.sections[i];
+                if(section.text != undefined)
+                {
+                	htmlString+= section.text;
+                }
+                if(section.code != undefined)
+                {
+                	htmlString+= section.code;
+                }
+            }
+            var final = htmlString;  
+            var pointer="";     
+            var scoreInPercentage = "";
+
+            if(finding.pointerLocationColumn != undefined)
+            {
+                pointer+='( ' + finding.pointerLocationColumn;
+            }
+            if(finding.pointerLocationRow != undefined)
+            {
+                pointer+=', ' + finding.pointerLocationRow;
+            }
+            if(finding.pointerLocationPos != undefined)
+            {
+                pointer+= ", " + finding.pointerLocationPos + ' )';
+            }
+            if(finding.score != undefined)
+	    	{
+	    		var scoreStr = finding.score.toString();
+	    		if(scoreStr.indexOf("-") != -1)
+	    		{
+	    		    scoreStr = scoreStr.replace("-", "");
+	    		}
+	            var scoreFloat = parseFloat(scoreStr).toFixed(2);
+	    	    scoreInPercentage = scoreFloat.concat("%");
+	    	}
+            
+            var severity = "";
+            if(finding.criticality != undefined)
+            {
+            	if(finding.criticality<3)
+            	{
+            		severity= "Low";
+            	}
+            	else if(finding.criticality>2 && finding.criticality<4)
+            	{
+            		severity= "Medium";
+            	}
+            	else if(finding.criticality>3 && finding.criticality<6)
+            	{
+            		severity= "High";
+            	}
+            	else
+            	{
+            		severity="-";
+            	}
+            	
+            }
+            
 	    	table += '<tr>'+
 		    	'<td>'+ (finding.path != undefined ? finding.path : "-") +'</td>'+
-		    	'<td>'+ (finding.type != undefined ? finding.criticality : "-") +'</td>'+
-		    	'<td>'+ (finding.score != undefined ? finding.score : "-") +'</td>'+
+		    	'<td>'+ (severity) +'</td>'+
+		    	'<td>'+ (finding.score != undefined ? scoreInPercentage : "-") +'</td>'+
 		    	'<td>'+ (finding.score != undefined ? finding.message : "-") +'</td>'+
+		    	'<td>'+ pointer + '</td>'+
+		    	'<td>'+ final +'</td>'+
 	    	'</tr>';
 	    });
 	    	

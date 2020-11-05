@@ -1,4 +1,3 @@
-Fail the build if issues count is greater than the configured count for the configured group/criticality count. 
-
-All 3 conditions are 'OR'ed together. 
-example: "Fail with more than 0 SECURITY findings with criticality more than or equals to 3" OR ...
+Fail the build if issue count is greater than the configured count for the selected severity. 
+All the selected conditions are 'OR'ed together. 
+For example: Selecting "SECURITY" and "OAS VIOLATION" will evaluate to - "Fail with more than 0 SECURITY issues with severity equal or above Low OR Fail with more than 0 OAS VIOLATION issues with severity equal or above Medium"
