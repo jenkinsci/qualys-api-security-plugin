@@ -51,8 +51,14 @@
     	
     	
     </style>
-    <script>
-    	function docReady1() {
+    <script type="text/javascript">
+    
+    document.onreadystatechange = docReady;  //for freestyle
+	document.load = docReady;   //for pipeline
+	
+    	function docReady() 
+    	{
+    		/*
 			var apiServerTr = document.getElementsByName("_.apiServer")[0].parentNode.parentNode;
 			apiServerTr.style.display = 'none';
 			apiServerTr.next('tr').style.display = 'none';
@@ -72,35 +78,121 @@
 		    	apiServerTr.style.display = 'table-row';
 				apiServerTr.next().style.display='table-row';
 		    }
-			
-		}
 		    
+		    if(document.getElementById("subRadioButton").checked)
+		    {
+		    	//Setting the radio button value by name was not working so we are getting both
+		    	//radio buttons by id and setting their value to set "freeUserType" value
+		    	document.getElementById("subRadioButton").value = "false";
+				document.getElementById("freeRadioButton").value = "false";
+			    document.getElementById("platform").parentNode.parentNode.style.display = 'table-row';
+				document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.style.display = "table-row" ;
+				document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.next().style.display = "table-row";
+				document.getElementsByName("_.apiId")[0].parentNode.parentNode.style.display = 'table-row' ;
+				document.getElementsByName("token")[0].parentNode.parentNode.style.display ='none';
+				document.getElementsByName("token")[0].parentNode.parentNode.next().style.display ='none';
+			    
+			}
+			else
+			{
+				document.getElementById("freeRadioButton").value = "true";
+				document.getElementById("subRadioButton").value = "true";
+				document.getElementsByName("_.apiServer")[0].parentNode.parentNode.style.display = 'none';
+				document.getElementsByName("_.apiServer")[0].parentNode.parentNode.next().style.display = 'none'
+				document.getElementById("platform").parentNode.parentNode.style.display = 'none';
+				document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.style.display = "none" ;
+				document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.next().style.display = "none" ;
+				document.getElementsByName("_.apiId")[0].parentNode.parentNode.style.display = 'none' ;
+				document.getElementsByName("token")[0].parentNode.parentNode.style.display ='table-row';
+				document.getElementsByName("token")[0].parentNode.parentNode.next().style.display ='table-row';
+			
+			}
+		};
+		
+		function radioButtonClicked(str)
+		{	
+			if(str == "subRadioButton")
+			{
+				document.getElementById("subRadioButton").value = "false";
+				document.getElementById("freeRadioButton").value = "false";
+				if(document.getElementById("platform").parentNode.parentNode.style.display == 'none')
+				{	
+					document.getElementById("platform").parentNode.parentNode.style.display = 'table-row';
+					if(document.getElementById("platform").value == "PCP")
+					{
+		    	        document.getElementsByName("_.apiServer")[0].parentNode.parentNode.style.display = 'table-row';
+				        document.getElementsByName("_.apiServer")[0].parentNode.parentNode.next().style.display = 'table-row';
+		            }
+					document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.style.display = "table-row" ;
+					document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.next().style.display = "table-row" ;
+					document.getElementsByName("token")[0].parentNode.parentNode.style.display ='none';
+					document.getElementsByName("token")[0].parentNode.parentNode.next().style.display ='none';
+					document.getElementsByName("token")[0].value = "";
+					document.getElementsByName("_.apiId")[0].parentNode.parentNode.style.display = 'table-row' ;
+				}
+			}
+			if(str == "freeRadioButton")
+			{
+				document.getElementById("freeRadioButton").value = "true";
+				document.getElementById("subRadioButton").value = "true";
+				if(document.getElementsByName("_.apiId")[0].parentNode.parentNode.style.display == 'table-row')
+				{	
+					document.getElementsByName("_.apiServer")[0].parentNode.parentNode.style.display = 'none';
+					document.getElementsByName("_.apiServer")[0].parentNode.parentNode.next().style.display = 'none'
+					document.getElementById("platform").parentNode.parentNode.style.display = 'none';
+					document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.style.display = "none" ;
+					document.getElementsByName("_.credsId")[0].parentNode.parentNode.parentNode.parentNode.next().style.display = "none" ;
+					document.getElementsByName("_.apiId")[0].parentNode.parentNode.style.display = 'none' ;
+					document.getElementsByName("token")[0].parentNode.parentNode.style.display ='table-row';
+					document.getElementsByName("token")[0].parentNode.parentNode.next().style.display ='table-row';
+				}
+			}*/
+		} 
+		  
 	</script>
-    
+    	
     <f:block>
     	<div class="qualys_logo">
 			<img src="${resURL}/plugin/qualys-api-security/images/logo.png"/>
 		</div>
     </f:block>
     
-    <f:section title="API Login">
-    	<f:block> <div> Provide details for accessing the Qualys APIs.  </div> <br /> </f:block>
-		 
-		 
+    <f:section title="API Token to Assess your Swagger or OpenAPI File">
+    
+    <!--<f:block> <div> Please select method for authenticating to the Qualys API </div> </f:block>
+     <f:block>
+		<f:radio name="freeUserType" id="subRadioButton" onclick="radioButtonClicked('subRadioButton')" value="false" title="Credentials for an active Qualys subscription" checked="${!instance.isFreeUserType()}"/>	
+	 </f:block>
+	 
+	 <f:block>
 		<f:entry title="Your Qualys Portal" field="platform" help="/plugin/qualys-api-security/help/platform.html">
-	        <f:select name="platform" id="platform" />
-	    </f:entry>
-	    <f:block >
-	    	<f:entry field="apiServer" title="API Server URL:" help="/plugin/qualys-api-security/help/apiServer.html">
-		        <f:textbox id="apiServer" />
-		    </f:entry>
-	    </f:block >
-	    
-	    <f:entry field="credsId" title=" ${%Credentials}" help="/plugin/qualys-api-security/help/credentialsId.html">
+			<f:select name="platform" id="platform" />
+		</f:entry>
+		<f:entry field="apiServer" title="API Server URL:" help="/plugin/qualys-api-security/help/apiServer.html">
+	       	<f:textbox id="apiServer" />
+	 	</f:entry>
+		<f:entry field="credsId" title=" ${%Credentials}" help="/plugin/qualys-api-security/help/credentialsId.html">
 			<c:select id="credsId" />
 		</f:entry>
-	    
-	    <f:optionalBlock name="useProxy" title="Use Proxy Settings" field="useProxy" inline="true">
+		 <br />
+	</f:block>
+	
+	 <f:block>
+		<f:radio name="freeUserType" id="freeRadioButton" onclick="radioButtonClicked('freeRadioButton')" value="true" title="Token received after free registration" checked="${instance.isFreeUserType()}"/>	
+	 </f:block>
+	-->
+	 <f:block>
+		<f:entry title="Your API Token :" field="token" help="/plugin/qualys-api-security/help/token.html">
+	      	 <f:textarea name="token" id="token" />
+	      	 <div>
+	      	 	To generate token click <a href="https://qualysguard.qg3.apps.qualys.com/as/register.html" target="_blank">here</a>
+	      	 </div>
+		</f:entry>
+    </f:block>
+    
+    
+    
+     <f:optionalBlock name="useProxy" title="Use Proxy Settings" field="useProxy" inline="true">
 	    	<f:block> <div style="margin-left:30px;">
 		    	<f:entry title="Proxy Server:" field="proxyServer" description="Examples: 10.15.201.155, corp.proxyserver.company.com" help="/plugin/qualys-api-security/help/proxyServer.html" >
 		        	<f:textbox style="width: 50%; min-width: 320px;" id="proxyServer" />
@@ -114,24 +206,23 @@
 		    </div></f:block> 
 	    </f:optionalBlock>
 	    
-	    <f:validateButton title="Test Connection" progress="Testing..." method="checkConnection" with="platform,apiServer,credsId,proxyServer,proxyPort,proxyCredentialsId,useProxy"/>
+	    <f:validateButton title="Validate Token" progress="Validating..." method="checkConnection" with="platform,apiServer,credsId,proxyServer,proxyPort,proxyCredentialsId,useProxy,token"/>
 	</f:section>
 	
 	
-    <f:section title="Static Assessment API Parameters">
-    	<f:block> <div> Provide information required for Static Assessment API </div> <br /> </f:block>
+    <f:section title="Swagger/OpenAPI File path">
 		
-		<f:entry title="Swagger file path" field="swaggerPath" help="/plugin/qualys-api-security/help/swaggerPath.html">
+		<f:entry title="File path :" field="swaggerPath" help="/plugin/qualys-api-security/help/swaggerPath.html">
 	        <f:textbox style="width: 50%; min-width: 320px;" />
 	    </f:entry>
 	    
-		<f:entry title="Select API to scan" field="apiId" help="/plugin/qualys-api-security/help/apiId.html">
+		<!--<f:entry title="Select API to scan" field="apiId" help="/plugin/qualys-api-security/help/apiId.html">
 	        <f:select fillDependsOn="apiServer credsId" style="width: 35%; min-width: 250px;" />
-	    </f:entry>
+	    </f:entry> -->
 	    
 	    <f:block>
 	    	<div class="qualys_logo" style="display:none;">
-				<img src="${resURL}/plugin/qualys-api-security/images/logo.png" onload="docReady1()"/>
+				<img src="${resURL}/plugin/qualys-api-security/images/logo.png" onload="docReady()"/>
 			</div>
     	</f:block>
 	    
@@ -147,32 +238,41 @@
 			     </f:block>
 			     
 				 <f:block>
-					<div id="failConditionTitle" class="conditionTitle">&#160; &#160; &#160; &#160; &#160; &#160; &#160; By Grade</div> 
+					<div id="failConditionTitle" class="conditionTitle">&#160; &#160; &#160; &#160; &#160; &#160; &#160; <b>By Score :</b></div> 
 		    	</f:block>
 		    	<f:entry  help="/plugin/qualys-api-security/help/failOnGrade.html"></f:entry>
 		    	<f:block>	
 		      		<div class="groupScoreBlock" id="gradeSection">
-				        &#160; &#160; &#160; &#160; &#160; &#160; &#160; <f:checkbox field="isFailOnGrade" title="Fail with less than Grade score:" />
+				        &#160; &#160; &#160; &#160; &#160; &#160; &#160; <f:checkbox field="isFailOnGrade" title="Fail with score less than:" />
 				        <f:textbox field="grade" name="grade" style="width:9%; min-width:45px; max-width:50px;" default="0" />
 				    </div>
 		    	</f:block>
 		    	<f:entry />
 		    	<f:block>
-					<div id="failConditionTitle" class="conditionTitle">&#160; &#160; &#160; &#160; &#160; &#160; &#160; By Group/Criticality</div> 
+					<div id="failConditionTitle" class="conditionTitle">&#160; &#160; &#160; &#160; &#160; &#160; &#160; <b>By Severity :</b></div> 
 		    	</f:block>
 		    	<f:entry  help="/plugin/qualys-api-security/help/failOnGroupCriticality.html"></f:entry>
 		    	<f:block>
 			      	<div class="groupScoreBlock" id="SeveritySection">
 				        &#160; &#160; &#160; &#160; &#160; &#160; &#160; <f:checkbox field="isFailOnSecurityGroup" title="Fail with more than " />
-				        <f:textbox field="securityGroupCount" name="securityGroupCount" style="width:9%; min-width:45px; max-width:50px;" default="0" /> SECURITY findings with criticality more than or equals to: <f:select field="securityCriticality" name="securityCriticality" style="width:9%; min-width:45px; max-width:50px;" default="1" />
+				        <f:textbox field="securityGroupCount" name="securityGroupCount" style="width:9%; min-width:45px; max-width:50px;" default="0" /> 
+				        SECURITY issues with severity equal to 
+				        <f:select field="securityCriticality" name="securityCriticality" style="width:15%; min-width:45px; max-width:100px;" default="1" />
+				         &#160;&#160; or above. 
 				    </div>
 			      	<div class="groupScoreBlock">
-				        &#160; &#160; &#160; &#160; &#160; &#160; &#160; <f:checkbox field="isFailOnValidationGroup" title="Fail with more than   " />
-				        <f:textbox field="validationGroupCount" name="validationGroupCount" style="width:9%; min-width:45px; max-width:50px;" default="0"/> VALIDATION findings with criticality more than  or equals to: <f:select field="validationCriticality" name="validationCriticality" style="width:9%; min-width:45px; max-width:50px;" default="1" />
+				        &#160; &#160; &#160; &#160; &#160; &#160; &#160; <f:checkbox field="isFailOnViolationGroup" title="Fail with more than   " />
+				        <f:textbox field="violationGroupCount" name="violationGroupCount" style="width:9%; min-width:45px; max-width:50px;" default="0"/> 
+				        OAS VIOLATION issues with severity equal to 
+				        <f:select field="violationCriticality" name="violationCriticality" style="width:15%; min-width:45px; max-width:100px;" default="1" />
+				        &#160;&#160; or above.
 				    </div>
 			      	<div class="groupScoreBlock"> 
 				        &#160; &#160; &#160; &#160; &#160; &#160; &#160; <f:checkbox field="isFailOnDataGroup" title="Fail with more than   " />
-				        <f:textbox field="dataGroupCount" name="dataGroupCount" style="width:9%; min-width:45px; max-width:50px;" default="0"/> DATA findings with criticality more than  or equals to: <f:select field="dataCriticality" name="dataCriticality" style="width:9%; min-width:45px; max-width:50px;" default="1" />
+				        <f:textbox field="dataGroupCount" name="dataGroupCount" style="width:9%; min-width:45px; max-width:50px;" default="0"/>
+				         DATA VALIDATION issues with severity equal to 
+				         <f:select field="dataCriticality" name="dataCriticality" style="width:15%; min-width:45px; max-width:100px;" default="1" />
+				         &#160;&#160; or above.
 				   </div>
 				</f:block>
 		    </f:block>

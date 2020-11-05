@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 import org.apache.commons.lang.StringUtils;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -41,31 +42,30 @@ import com.qualys.plugins.QualysAPISecurityPlugin.QualysClient.QualysAPISecClien
 import com.qualys.plugins.QualysAPISecurityPlugin.QualysClient.QualysAPISecTestConnectionResponse;
 import com.qualys.plugins.QualysAPISecurityPlugin.report.ReportAction;
 import com.qualys.plugins.QualysAPISecurityPlugin.util.Helper;
-import com.qualys.plugins.QualysAPISecurityPlugin.util.InvalidConfigurationExcetpion;
+import com.qualys.plugins.QualysAPISecurityPlugin.util.InvalidConfigurationException;
+import com.qualys.plugins.QualysAPISecurityPlugin.util.Severity;
 import com.qualys.plugins.QualysAPISecurityPlugin.util.ValidateParameters;
 
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
 import hudson.model.Item;
-import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.ListBoxModel.Option;
 import jenkins.model.Jenkins;
-import hudson.tasks.Builder;
+import jenkins.tasks.SimpleBuildStep;
 
 @Extension
-public class APISecurityNotifier extends Builder {
+public class APISecurityNotifier extends Builder implements SimpleBuildStep {
 	private final static int PROXY_PORT = 80;
 	private String platform;
 	private String apiServer;
@@ -75,32 +75,102 @@ public class APISecurityNotifier extends Builder {
     private int proxyPort = PROXY_PORT;
     private String proxyCredentialsId;
     private boolean useProxy = false;
-    private String swaggerPath;
-    private String newAppName;
-    
+    private String swaggerPath;   
     private boolean isFailOnGrade;
     private String grade;
     private boolean isFailOnSecurityGroup;
     private boolean isFailOnDataGroup;
-    private boolean isFailOnValidationGroup;
+    private boolean isFailOnViolationGroup;
     private String securityGroupCount;
     private String dataGroupCount;
-    private String validationGroupCount;
+    private String violationGroupCount;
     private String securityCriticality;
     private String dataCriticality;
-    private String validationCriticality;
+    private String violationCriticality;
+    private boolean freeUserType = true;
+    private String token;
+    
+    private final static String tokenServerPath = "https://gateway.qg3.apps.qualys.com/";
     
     private final static Logger logger = Helper.getLogger(APISecurityNotifier.class.getName());
     
     @DataBoundConstructor
-    public APISecurityNotifier(String apiServer, String credsId) {
-        this.apiServer = apiServer;
+	public APISecurityNotifier(String platform, String apiServer, String credsId, boolean useProxy, String proxyServer, int proxyPort, String proxyCredentialsId,
+    		String swaggerPath, String apiId, boolean isFailOnGrade, String grade, boolean isFailOnSecurityGroup,
+    		String securityGroupCount, String securityCriticality, boolean isFailOnDataGroup, String dataGroupCount,	String dataCriticality,
+    		boolean isFailOnViolationGroup, String violationGroupCount,String violationCriticality,String token, boolean freeUserType) {
+        
+    	this.platform = platform;
+        if("pcp".equalsIgnoreCase(platform)) {
+        	this.apiServer = apiServer;
+        }
         this.credsId = credsId;
+        this.apiId = apiId;
+        
+        this.useProxy = useProxy;
+        if(this.useProxy) {
+	        this.proxyServer = proxyServer;
+	        this.proxyPort = proxyPort;
+	        this.proxyCredentialsId = proxyCredentialsId;
+        }
+        this.swaggerPath = swaggerPath;
+        
+        if(isFailOnGrade) {
+        	this.isFailOnGrade = true;
+        	this.grade = grade;
+        }
+        if(isFailOnSecurityGroup) {
+        	this.isFailOnSecurityGroup = true;
+        	this.securityGroupCount = securityGroupCount;
+        	this.securityCriticality = securityCriticality;
+        }
+        if(isFailOnDataGroup) {
+        	this.isFailOnDataGroup = true;
+        	this.dataGroupCount = dataGroupCount;
+        	this.dataCriticality = dataCriticality;
+        }
+        if(isFailOnViolationGroup) {
+        	this.isFailOnViolationGroup = true;
+        	this.violationGroupCount = violationGroupCount;
+        	this.violationCriticality = violationCriticality;
+        }
+       
+        if(this.freeUserType)
+        {
+        	this.token = token;
+        	this.apiServer = tokenServerPath;
+        	this.apiId = "";
+        }
+        else
+        {
+        	this.token = "";
+        }
+		
     }
     
-    public APISecurityNotifier() { }
+    public APISecurityNotifier() {};
     
     public String getPlatform() { return platform; }
+    
+    public boolean isFreeUserType() {
+		return freeUserType;
+	}
+	
+	/*
+	 * @DataBoundSetter public void setFreeUserType(boolean freeUserType) {
+	 * this.freeUserType = freeUserType; }
+	 */
+	
+	public boolean getFreeUserType() {
+		return this.freeUserType;
+	}
+    
+    @DataBoundSetter
+    public void setToken(String token) { this.token = token; }
+	
+	public String getToken() {
+		return this.token;
+	}
     
     @DataBoundSetter
     public void setPlatform(String platform) { this.platform = platform; }
@@ -149,12 +219,7 @@ public class APISecurityNotifier extends Builder {
 	public void setUseProxy(boolean useProxy) { this.useProxy = useProxy; }
 	
 	public String getSwaggerPath() { return swaggerPath;	}
-
-    @DataBoundSetter
-	public void setNewAppName(String newAppName) { this.newAppName = newAppName; }
-    
-    public String getNewAppName() { return newAppName;	}
-
+	
     @DataBoundSetter
 	public void setSwaggerPath(String swaggerPath) { this.swaggerPath = swaggerPath; }
 	
@@ -175,8 +240,8 @@ public class APISecurityNotifier extends Builder {
     public boolean getIsFailOnDataGroup() { return this.isFailOnDataGroup; }
     
     @DataBoundSetter
-	public void setIsFailOnValidationGroup(boolean flag) { this.isFailOnValidationGroup = flag; }
-    public boolean getIsFailOnValidationGroup() { return this.isFailOnValidationGroup; }
+	public void setIsFailOnViolationGroup(boolean flag) { this.isFailOnViolationGroup = flag; }
+    public boolean getIsFailOnViolationGroup() { return this.isFailOnViolationGroup; }
     
     @DataBoundSetter
 	public void setSecurityGroupCount(String val) { this.securityGroupCount = val; }
@@ -187,8 +252,8 @@ public class APISecurityNotifier extends Builder {
     public String getDataGroupCount() { return this.dataGroupCount; }
     
     @DataBoundSetter
-	public void setValidationGroupCount(String val) { this.validationGroupCount = val; }
-    public String getValidationGroupCount() { return this.validationGroupCount; }
+	public void setViolationGroupCount(String val) { this.violationGroupCount = val; }
+    public String getViolationGroupCount() { return this.violationGroupCount; }
     
     @DataBoundSetter
 	public void setSecurityCriticality(String val) { this.securityCriticality = val; }
@@ -199,17 +264,20 @@ public class APISecurityNotifier extends Builder {
     public String getDataCriticality() { return this.dataCriticality; }
 
     @DataBoundSetter
-	public void setValidationCriticality(String val) { this.validationCriticality = val; }
-    public String getValidationCriticality() { return this.validationCriticality; }
+	public void setViolationCriticality(String val) { this.violationCriticality = val; }
+    public String getViolationCriticality() { return this.violationCriticality; }
     
     @Extension
+	@Symbol(value = { "qualysAPIStaticAssessment" })
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
     	private final String URL_REGEX = "^(https)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
         private final String PROXY_REGEX = "^((https?)://)?[-a-zA-Z0-9+&@#/%?=~_|!,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
+        private final String TOKEN_REGEX = "^[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+\\.?[A-Za-z0-9-_.+/=]*$";
+        private boolean freeUserType = true;
         
     	@Override
         public String getDisplayName() {
-    		return "qualysAPIStaticAssessment: Perform API Static Assesment";
+    		return "Perform API Security Assessment with Qualys";
         }
 		
     	public boolean isNonUTF8String(String string) {
@@ -291,9 +359,14 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillApiIdItems(@AncestorInPath Item item, @QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId, @QueryParameter String proxyServer, 
-        		@QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, @QueryParameter boolean useProxy) {
+        		@QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, @QueryParameter boolean useProxy,@QueryParameter String token) {
         	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	StandardListBoxModel model = new StandardListBoxModel();
+        	if(!token.isEmpty())
+        	{
+        		logger.info("API ID is not needed for free user type");
+        		return model.withEmptySelection();
+        	}
         	try {
         		if(isFilledInputs(platform, apiServer, credsId, useProxy, proxyServer)) {
         			int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
@@ -305,7 +378,7 @@ public class APISecurityNotifier extends Builder {
                 	if(!platform.equalsIgnoreCase("pcp")) {
                 		Map<String, String> platformObj = Helper.platformsList.get(platform);
                 		server = platformObj.get("url");
-                		logger.info("Using qualys API Server URL: " + apiServer);
+                		logger.info("Using qualys API Server URL: " + server);
                 	}
             		if (StringUtils.isNotEmpty(credsId)) {
 
@@ -337,17 +410,19 @@ public class APISecurityNotifier extends Builder {
                         proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
                     }
                 	if(useProxy) {
-                    	//int proxyPortInt = Integer.parseInt(proxyPort);
                     	auth.setProxyCredentials(proxyServer, proxyPortInt, proxyUsername, proxyPassword);
                 	}
                 	QualysAPISecClient client = new QualysAPISecClient(auth, System.out);
 	        		JsonArray dataList = client.getAppList();
-	        		for(JsonElement  webapp : dataList) {
-	        			JsonObject obj = webapp.getAsJsonObject();
-	        			String id = obj.get("id").getAsString();
-	        			String name = obj.get("name").getAsString();
-	        			Option e = new Option(name, id);
-	                	model.add(e);
+	        		if(dataList!=null)
+	        		{
+		        		for(JsonElement  webapp : dataList) {
+		        			JsonObject obj = webapp.getAsJsonObject();
+		        			String id = obj.get("id").getAsString();
+		        			String name = obj.get("name").getAsString();
+		        			Option e = new Option(name, id);
+		                	model.add(e);
+		        		}
 	        		}
         		}
         	} catch(Exception e) {
@@ -377,65 +452,99 @@ public class APISecurityNotifier extends Builder {
         @POST
         public FormValidation doCheckConnection(@QueryParameter String platform, @QueryParameter String apiServer, @QueryParameter String credsId,
         		@QueryParameter String proxyServer, @QueryParameter String proxyPort, @QueryParameter String proxyCredentialsId, 
-        		@QueryParameter boolean useProxy, @AncestorInPath Item item) {
+        		@QueryParameter boolean useProxy, @AncestorInPath Item item, @QueryParameter String token) {
 
-        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
-        	try {
-            	int proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
-            	
-            	String apiUser = "";
+	        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
+	        	String proxyUsername = "";
+	    		String proxyPassword = "";
+	    		QualysAuth auth = new QualysAuth();
+	    		int proxyPortInt = 0;
+	    		String apiUser = "";
         		String apiPass = "";
-        		String proxyUsername = "";
-        		String proxyPassword = "";
-        		String server = apiServer != null ? apiServer.trim() : "";
-        		//set apiServer URL according to platform
-            	if(!platform.equalsIgnoreCase("pcp")) {
-            		Map<String, String> platformObj = Helper.platformsList.get(platform);
-            		server = platformObj.get("url");
-            		logger.info("Using qualys API Server URL: " + apiServer);
-            	}
-        		if (StringUtils.isNotEmpty(credsId)) {
-
-                    StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
-                                    StandardUsernamePasswordCredentials.class,
-                                    item,
-                                    null,
-                                    Collections.<DomainRequirement>emptyList()),
-                            CredentialsMatchers.withId(credsId));
-
-                    apiUser = (c != null ? c.getUsername() : "");
-                    apiPass = (c != null ? c.getPassword().getPlainText() : "");
-                }
-        		QualysAuth auth = new QualysAuth();
-            	auth.setQualysCredentials(server, apiUser, apiPass);
+        		String server = "";
+        		logger.info("Is this a Free User Type : " + freeUserType);
+        		try 
+	    		{
+        			if(!freeUserType)
+        			{
+		    			server = apiServer != null ? apiServer.trim() : "";
+		        		//set apiServer URL according to platform
+		            	if(!platform.equalsIgnoreCase("pcp")) {
+		            		Map<String, String> platformObj = Helper.platformsList.get(platform);
+		            		server = platformObj.get("url");
+		            		logger.info("Using qualys API Server URL: " + server);
+		            	}
+		        		if (StringUtils.isNotEmpty(credsId)) {
+		
+		                    StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
+		                                    StandardUsernamePasswordCredentials.class,
+		                                    item,
+		                                    null,
+		                                    Collections.<DomainRequirement>emptyList()),
+		                            CredentialsMatchers.withId(credsId));
+		
+		                    apiUser = (c != null ? c.getUsername() : "");
+		                    apiPass = (c != null ? c.getPassword().getPlainText() : "");
+		                }
+		        		
+		            	auth.setQualysCredentials(server, apiUser, apiPass);
+		    		}
+        			if (StringUtils.isNotEmpty(proxyCredentialsId)) {
+	
+	                    StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
+	                                    StandardUsernamePasswordCredentials.class,
+	                                    item,
+	                                    null,
+	                                    Collections.<DomainRequirement>emptyList()),
+	                            CredentialsMatchers.withId(proxyCredentialsId));
+	
+	                    proxyUsername = (c != null ? c.getUsername() : "");
+	                    proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
+        			}
+        			if(useProxy) {
+        				proxyPortInt = (doCheckProxyPort(proxyPort)==FormValidation.ok()) ? Integer.parseInt(proxyPort) : 80;
+        				auth.setProxyCredentials(proxyServer, proxyPortInt, proxyUsername, proxyPassword);
+        			}
+        			if(freeUserType)
+        			{
+		            	if(StringUtils.isNotEmpty(token))
+		            	{
+		            		auth.setToken(token);
+		            		auth.setFreeUserType(freeUserType);
+		            	}
+		            	else
+		            	{
+		            		return FormValidation.error("Token should not be empty !!");
+		            	}
+        			}
+		            QualysAPISecClient client = new QualysAPISecClient(auth, System.out);
+		            QualysAPISecTestConnectionResponse resp = client.testConnection();
+		            logger.info("Received response code: " + resp.responseCode);
+		            if(!resp.success) {
+		            	return FormValidation.error(resp.message);
+		    	   	}
+		            return FormValidation.ok("Token Validation Successful");
+	    	    }
+	        	catch (Exception e) 
+        		{
+		            logger.info("Exception in validate token: " + e.getMessage());
+		            return FormValidation.error(e.getMessage());
+		        }
+	               
+        }
+        
+        public FormValidation doCheckToken(@QueryParameter String token) {        	
+        	try {
+            	Pattern patt = Pattern.compile(TOKEN_REGEX);
+                Matcher matcher = patt.matcher(token);
             	
-        		if (StringUtils.isNotEmpty(proxyCredentialsId)) {
-
-                    StandardUsernamePasswordCredentials c = CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(
-                                    StandardUsernamePasswordCredentials.class,
-                                    item,
-                                    null,
-                                    Collections.<DomainRequirement>emptyList()),
-                            CredentialsMatchers.withId(proxyCredentialsId));
-
-                    proxyUsername = (c != null ? c.getUsername() : "");
-                    proxyPassword = (c != null ? c.getPassword().getPlainText() : "");
+                if (!(matcher.matches())) {
+                    return FormValidation.error("Enter a valid token !");
+                } else {
+                    return FormValidation.ok();
                 }
-            	if(useProxy) {
-                	//int proxyPortInt = Integer.parseInt(proxyPort);
-                	auth.setProxyCredentials(proxyServer, proxyPortInt, proxyUsername, proxyPassword);
-            	}
-            	QualysAPISecClient client = new QualysAPISecClient(auth, System.out);
-            	QualysAPISecTestConnectionResponse resp = client.testConnection();
-            	logger.info("Received response code: " + resp.responseCode);
-            	if(!resp.success) {
-            		return FormValidation.error(resp.message);
-    	   		}
-            	return FormValidation.ok("Connection test successful!");
-                
             } catch (Exception e) {
-            	logger.info("Exception in test connection: " + e.getMessage());
-            	return FormValidation.error("Connection test failed. (Reason: Wrong inputs. Please check API Server and Proxy details.)");
+                return FormValidation.error(e.getMessage());
             }
         }
         
@@ -444,17 +553,30 @@ public class APISecurityNotifier extends Builder {
             	return FormValidation.error("Please provide valid UTF-8 string value.");
             }
         	try {
+        		String server;
+				if (proxyServer == null || proxyServer.trim().equals("")) {
+					return FormValidation.error("Proxy server cannot be empty !");
+				} else {
+					server = proxyServer.trim();
+				}
             	Pattern patt = Pattern.compile(PROXY_REGEX);
-                Matcher matcher = patt.matcher(proxyServer);
+                Matcher matcher = patt.matcher(server);
             	
                 if (!(matcher.matches())) {
-                    return FormValidation.error("Enter valid server url!");
+                    return FormValidation.error("Enter valid proxy server !");
                 } else {
                     return FormValidation.ok();
                 }
             } catch (Exception e) {
                 return FormValidation.error(e.getMessage());
             }
+        }
+        
+        public FormValidation doCheckProxyUser(@QueryParameter String proxyUser) {
+        	if(isNonUTF8String(proxyUser)) {
+            	return FormValidation.error("Please provide valid UTF-8 string value.");
+            }
+        	return FormValidation.ok();
         }
         
         public FormValidation doCheckProxyPort(@QueryParameter String proxyPort) {
@@ -464,8 +586,8 @@ public class APISecurityNotifier extends Builder {
         			if(proxyPortInt < 1 || proxyPortInt > 65535) {
         				return FormValidation.error("Please enter a valid port number!");
         			}
-        		}else {
-        			return FormValidation.error("Please enter a valid port number!");
+        		} else {
+        			return FormValidation.error("Port number cannot be empty!");
         		}
         	} catch(Exception e) {
         		return FormValidation.error("Enter valid port number!");
@@ -494,29 +616,29 @@ public class APISecurityNotifier extends Builder {
         		if (dataGroupCount != null && !dataGroupCount.isEmpty() && dataGroupCount.trim().length() > 0) {
         			int count = Integer.parseInt(dataGroupCount);
         			if(count < 0 ) {
-        				return FormValidation.error("Please enter a valid number!");
+        				return FormValidation.error("Please enter a valid input in Data Validation issues count field!");
         			}
         		}else {
-        			return FormValidation.error("Please enter a valid number!");
+        			return FormValidation.error("Data Validation issues count field should not be empty!");
         		}
         	} catch(Exception e) {
-        		return FormValidation.error("Enter valid number!");
+        		return FormValidation.error("Please enter a valid number in Data Validation issues count field!");
         	}
         	return FormValidation.ok();
         }
         
-        public FormValidation doCheckValidationGroupCount(@QueryParameter String validationGroupCount) {
+        public FormValidation doCheckViolationGroupCount(@QueryParameter String violationGroupCount) {
         	try {
-        		if (validationGroupCount != null && !validationGroupCount.isEmpty() && validationGroupCount.trim().length() > 0) {
-        			int count = Integer.parseInt(validationGroupCount);
+        		if (violationGroupCount != null && !violationGroupCount.isEmpty() && violationGroupCount.trim().length() > 0) {
+        			int count = Integer.parseInt(violationGroupCount);
         			if(count < 0 ) {
-        				return FormValidation.error("Please enter a valid number!");
+        				return FormValidation.error("Please enter a valid input in OAS Violation issues count field!");
         			}
         		}else {
-        			return FormValidation.error("Please enter a valid number!");
+        			return FormValidation.error("OAS Violation issues count field should not be empty!");
         		}
         	} catch(Exception e) {
-        		return FormValidation.error("Enter valid number!");
+        		return FormValidation.error("Please enter a valid number in OAS Violation issues count field!");
         	}
         	return FormValidation.ok();
         }
@@ -526,13 +648,13 @@ public class APISecurityNotifier extends Builder {
         		if (securityGroupCount != null && !securityGroupCount.isEmpty() && securityGroupCount.trim().length() > 0) {
         			int num = Integer.parseInt(securityGroupCount);
         			if(num < 0 ) {
-        				return FormValidation.error("Please enter a valid number!");
+        				return FormValidation.error("Please enter a valid input in Security issues count field!");
         			}
         		}else {
-        			return FormValidation.error("Please enter a valid number!");
+        			return FormValidation.error("Security issues count field should not be empty!");
         		}
         	} catch(Exception e) {
-        		return FormValidation.error("Enter valid number!");
+        		return FormValidation.error("Please enter a valid number in Security issues count field!");
         	}
         	return FormValidation.ok();
         }
@@ -550,34 +672,29 @@ public class APISecurityNotifier extends Builder {
         
         @POST
         public ListBoxModel doFillSecurityCriticalityItems() {
-        	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
-        	ListBoxModel model = new ListBoxModel();
-	    	for(int i=1; i<=5; i++) {
-	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
-		    	model.add(e1);
-	    	}
-        	return model;
+        	return fillItems();
         }
         
         @POST
         public ListBoxModel doFillDataCriticalityItems() {
         	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
-        	ListBoxModel model = new ListBoxModel();
-	    	for(int i=1; i<=5; i++) {
-	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
-		    	model.add(e1);
-	    	}
-        	return model;
+        	return fillItems();
         }
         
         @POST
-        public ListBoxModel doFillValidationCriticalityItems() {
+        public ListBoxModel doFillViolationCriticalityItems() {
+        	return fillItems();
+        }
+        
+        public ListBoxModel fillItems()
+        {
         	Jenkins.getInstance().checkPermission(Item.CONFIGURE);
         	ListBoxModel model = new ListBoxModel();
-	    	for(int i=1; i<=5; i++) {
-	    		Option e1 = new Option(Integer.toString(i), Integer.toString(i));
-		    	model.add(e1);
-	    	}
+        	for(Severity sev : Severity.values())
+    		{
+        		Option opt = new Option(sev.getValue(), sev.getValue());
+        		model.add(opt);
+    		}
         	return model;
         }
         
@@ -633,99 +750,86 @@ public class APISecurityNotifier extends Builder {
         }
 	}
     
-    @Override
-    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws AbortException {
-    	listener.getLogger().println("Qualys API Static Assessment(version-"+ getPluginVersion() +") task - Started.");
-    	if (apiId != null && !apiId.isEmpty()) {
-            try {
-            	Item project = build.getProject();
-            	launchStaticAssessment(build, listener, project, build.getWorkspace().absolutize(), launcher);
-            } catch (Exception e) {
-            	if(e.toString() == "java.lang.Exception") {
-            		throw new AbortException("Exception in Qualys API Static Assessment task. Finishing the build.");
-            	} else if (e.getMessage()!= null && e.getMessage().equalsIgnoreCase("sleep interrupted")) {
-            		logger.log(Level.SEVERE, "Error: User Aborted");
-            		throw new AbortException("User Aborted/Interrupted execution of the build.");
-            	}else {
-            		logger.log(Level.SEVERE, "Error: "+e.getMessage());
-            		e.printStackTrace();
-            		throw new AbortException(e.getMessage());
-            	}
-            } 
-    	}else {
-    	    listener.getLogger().println("No App ID Configured.");
-       		throw new AbortException("Application ID can't be set to null or empty.");
-      }
-      return true;
-    }
     
+	@Override
     public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath filePath, @Nonnull Launcher launcher, @Nonnull TaskListener taskListener) throws InterruptedException, IOException {
     	taskListener.getLogger().println("Qualys API Static Assessment(version-"+ getPluginVersion() +") task - Started.");
-    	
-    	if (apiId != null && !apiId.isEmpty()) {
-             try {
-            	 Item project = run.getParent();
-            	 launchStaticAssessment(run, taskListener, project, filePath.absolutize(), launcher);
-            	 
-             } catch (Exception e) {
-            	 if(e.toString() == "java.lang.Exception") {
-	            		throw new AbortException("Exception in Qualys API Static Assessment task. Finishing the build.");
-	            	} else if (e.getMessage()!= null && e.getMessage() != null && e.getMessage().equalsIgnoreCase("sleep interrupted")) {
-	            		logger.log(Level.SEVERE, "Error: User Aborted");
-	            		throw new AbortException("User Aborted/Interrupted execution of the build.");
-	            	}else {
-		            	 logger.log(Level.SEVERE, "Error: "+e.getMessage());
-		            	 e.printStackTrace();
-		                 throw new AbortException(e.getMessage());
-	            	}
-             }
-        } else {
-        	taskListener.getLogger().println("No App ID Configured.");
-        	throw new AbortException("Application ID can't be set to null or empty.");
-        }
+	    	if ((apiId != null && !apiId.isEmpty()) || freeUserType) {
+	             try {
+	            	 Item project = run.getParent();
+	            	 launchStaticAssessment(run, taskListener, project, filePath.absolutize(), launcher);
+	            	 
+	             } catch (Exception e) {
+	            	 if(e.toString().equals("java.lang.Exception")) {
+		            		throw new AbortException("Exception in Qualys API Static Assessment task. Finishing the build.");
+		            	} else if (e.getMessage()!= null && e.getMessage().equalsIgnoreCase("sleep interrupted")) {
+		            		logger.log(Level.SEVERE, "Error: User Aborted");
+		            		throw new AbortException("User Aborted/Interrupted execution of the build.");
+		            	}else {
+			            	 logger.log(Level.SEVERE, "Error: "+e.getMessage());
+			            	 e.printStackTrace();
+			                 throw new AbortException(e.getMessage());
+		            	}
+	             }
+	        } else {
+	        	taskListener.getLogger().println("No APP ID Configured.");
+	        	throw new AbortException("API ID can't be set to null or empty.");
+	        }
         return;
     }
     
     public void launchStaticAssessment(Run<?, ?> run, TaskListener listener, Item project, FilePath workspace, Launcher launcher) throws Exception {
-    	Map<String, String> platformObj = Helper.platformsList.get(platform);
+    	//Map<String, String> platformObj = Helper.platformsList.get(platform);
     	String portalUrl = apiServer;
-    	//set apiServer URL according to platform
-    	if(!platform.equalsIgnoreCase("pcp")) {
-    		setApiServer(platformObj.get("url"));
-    		logger.info("Using qualys API Server URL: " + apiServer);
-    		portalUrl = platformObj.get("portal");
-    	}
-
-    	listener.getLogger().println("Qualys Platform: " + platform +". Using Qualys API server: " + apiServer);
-    	String apiUser = "";
-    	String apiPass = "";
-    	try {
-			StandardUsernamePasswordCredentials credential = CredentialsMatchers.firstOrNull(
-					CredentialsProvider.lookupCredentials(
-							StandardUsernamePasswordCredentials.class,
-							project, ACL.SYSTEM,
-							URIRequirementBuilder.fromUri(apiServer).build()),
-					CredentialsMatchers.withId(credsId));
-			
-			if (credential != null) {
-				apiUser = credential.getUsername();
-				apiPass = credential.getPassword().getPlainText();
-				if(apiPass.trim().equals("") || apiUser.trim().equals("")) {
-					throw new Exception("Username and/or Password field is empty for credentials id: " + credsId);
-				}
-			}else {
-				throw new Exception("Could not read credentials for credentials id: " + credsId);
-			}
-		}catch(Exception e){
-			e.printStackTrace();
-			//buildLogger.println("Inavlid credentials! " + e.getMessage());
-			throw new Exception("Inavlid credentials! " + e.getMessage());
-		}
     	String proxyUsername = "";
 		String proxyPassword = "";
-    	//test connection first
+		String apiUser = "";
+    	String apiPass = "";
     	QualysAuth auth = new QualysAuth();
-    	auth.setQualysCredentials(apiServer, apiUser, apiPass);
+    	//set apiServer URL according to platform
+		/*
+		 * if(!platform.equalsIgnoreCase("pcp") && StringUtils.isEmpty(this.token)) {
+		 * setApiServer(platformObj.get("url"));
+		 * logger.info("Using qualys API Server URL: " + apiServer); portalUrl =
+		 * platformObj.get("portal"); }
+		 */
+    	
+    	if(!freeUserType)
+		{
+    		listener.getLogger().println("Qualys Platform: " + platform +". Using Qualys API server: " + apiServer);
+			try {
+					StandardUsernamePasswordCredentials credential = CredentialsMatchers.firstOrNull(
+							CredentialsProvider.lookupCredentials(
+									StandardUsernamePasswordCredentials.class,
+									project, ACL.SYSTEM,
+									URIRequirementBuilder.fromUri(apiServer).build()),
+							CredentialsMatchers.withId(credsId));
+					
+					if (credential != null) {
+						apiUser = credential.getUsername();
+						apiPass = credential.getPassword().getPlainText();
+						if(apiPass.trim().equals("") || apiUser.trim().equals("")) {
+							throw new Exception("Username and/or Password field is empty for credentials id: " + credsId);
+						}
+					}else {
+						throw new Exception("Could not read credentials for credentials id: " + credsId);
+					}
+			}catch(Exception e){
+				e.printStackTrace();
+				throw new Exception("Invalid credentials! " + e.getMessage());
+			}
+			
+			auth.setQualysCredentials(apiServer, apiUser, apiPass);
+		}	
+    	//test connection first
+    	
+    	if(freeUserType && StringUtils.isNotEmpty(token))
+    	{
+    		auth.setTokenServer(apiServer);
+    		auth.setToken(token);
+    		auth.setFreeUserType(freeUserType);
+    	}
+    	
     	if(useProxy) {
     		if (StringUtils.isNotEmpty(proxyCredentialsId)) {
     			StandardUsernamePasswordCredentials credential = CredentialsMatchers.firstOrNull(
@@ -743,13 +847,13 @@ public class APISecurityNotifier extends Builder {
         	auth.setProxyCredentials(proxyServer, proxyPort, proxyUsername, proxyPassword);
     	}
     	
-    	if (apiId == null || apiId.isEmpty()) {
-         	listener.getLogger().println("No Application ID configured.");
+    	if ((apiId == null || apiId.isEmpty()) && !freeUserType) {
+         	listener.getLogger().println("No API Id configured.");
          	return;
         }
     	
     	JsonObject criteriaObject = validateAndMakeCriteriaObject(listener, workspace);
-    	boolean failConditionsConfigured = isFailOnGrade || isFailOnDataGroup || isFailOnSecurityGroup || isFailOnValidationGroup;
+    	boolean failConditionsConfigured = isFailOnGrade || isFailOnDataGroup || isFailOnSecurityGroup || isFailOnViolationGroup;
     	listener.getLogger().println("Using Build failure conditions: " + criteriaObject);
     	
     	logger.info("Qualys task - Started Static Assessment with Qualys API.");
@@ -757,7 +861,7 @@ public class APISecurityNotifier extends Builder {
     	String result = "";
     	String artifactsDir = run.getArtifactsDir().getAbsolutePath();
     	try {
-			result = launcher.getChannel().call(new APISecLauncher(listener, apiId, newAppName, 
+			result = launcher.getChannel().call(new APISecLauncher(listener, apiId, 
 	    			auth, portalUrl, swaggerPath, workspace.toString(), failConditionsConfigured, gson.toJson(criteriaObject)));
 		}catch(Exception e) {
 			e.printStackTrace(listener.getLogger());
@@ -774,7 +878,7 @@ public class APISecurityNotifier extends Builder {
     	listener.getLogger().println("Qualys task - Finished.");
         logger.info("Qualys task - Finished.");
         
-        if(resultObj.has("failureMessage") && !resultObj.get("failureMessage").isJsonNull()) {
+        if(resultObj!=null && resultObj.has("failureMessage") && !resultObj.get("failureMessage").isJsonNull()) {
         	throw new Exception(resultObj.get("failureMessage").getAsString());
         }
     }
@@ -783,7 +887,7 @@ public class APISecurityNotifier extends Builder {
     	JsonObject criteriaObject = new JsonObject();
     	JsonObject failConditions = new JsonObject();
     	//validate api id
-    	if(apiId == null || StringUtils.isBlank(apiId)) {
+    	if((apiId == null || StringUtils.isBlank(apiId)) && !freeUserType) {
     		throw new Exception("Invalid/missing API id. API id can't be set to null/empty.");
     	}
     	//validate swagger path
@@ -794,54 +898,52 @@ public class APISecurityNotifier extends Builder {
     	if(isFailOnGrade) {
     		try{
     			ValidateParameters.validateFloat(grade);
-    		}catch(InvalidConfigurationExcetpion e){
+    		}catch(InvalidConfigurationException e){
     			throw new Exception("Invalid/missing configuration for 'grade' parameter value, provide valid float number.");
     		}
     		failConditions.addProperty("grade", grade);
     	}
-    	if(isFailOnSecurityGroup || isFailOnDataGroup || isFailOnValidationGroup) {
-    		JsonObject groupCriticality = new JsonObject();
-    		if(isFailOnSecurityGroup) {
-    			try {
-    				ValidateParameters.validateCriticalityNumber(securityCriticality);
-    				ValidateParameters.validateGroupCountNumber(securityGroupCount);
-    			}catch(InvalidConfigurationExcetpion e){
-    				throw new Exception("Invalid/Missing configuration for security GroupCriticality configuration('securityCriticality' or 'securityGroupCount') parameter value, provide valid numbers.");
-    			}
-    			
-    			JsonObject secObj = new JsonObject();
-    			secObj.addProperty("count", securityGroupCount);
-    			secObj.addProperty("criticality", securityCriticality);
-    			groupCriticality.add("security", secObj);
-    		}
-    		if(isFailOnDataGroup) {
-    			try {
-    				ValidateParameters.validateCriticalityNumber(dataCriticality);
-    				ValidateParameters.validateGroupCountNumber(dataGroupCount);
-    			}catch(InvalidConfigurationExcetpion e){
-    				throw new Exception("Invalid/Missing configuration for data GroupCriticality configuration('dataCriticality' or 'dataGroupCount') parameter value, provide valid numbers.");
-    			}
-    			JsonObject secObj = new JsonObject();
-    			secObj.addProperty("count", dataGroupCount);
-    			secObj.addProperty("criticality", dataCriticality);
-    			groupCriticality.add("data", secObj);
-    		}
-    		if(isFailOnValidationGroup) {
-    			try {
-    				ValidateParameters.validateCriticalityNumber(validationCriticality);
-    				ValidateParameters.validateGroupCountNumber(validationGroupCount);
-    			}catch(InvalidConfigurationExcetpion e){
-    				throw new Exception("Invalid/Missing configuration for validation GroupCriticality configuration('validationCriticality' or 'validationGroupCount') parameter value, provide valid numbers.");
-    			}
-    			JsonObject secObj = new JsonObject();
-    			secObj.addProperty("count", validationGroupCount);
-    			secObj.addProperty("criticality", validationCriticality);
-    			groupCriticality.add("validation", secObj);
-    		}
-    		failConditions.add("groupCriticality", groupCriticality);
-    	}
+		if (isFailOnSecurityGroup || isFailOnDataGroup || isFailOnViolationGroup) {
+			JsonObject groupCriticality = new JsonObject();
+			if (isFailOnSecurityGroup) {
+				try {
+					validateCriteriaObj("security", securityGroupCount, securityCriticality , groupCriticality);
+				} catch (InvalidConfigurationException e) {
+					throw new Exception(
+							"Invalid/Missing configuration for security GroupCriticality configuration('securityCriticality' or 'securityGroupCount') parameter value, provide valid numbers.");
+				}
+			}
+			if (isFailOnDataGroup) {
+				try {
+					validateCriteriaObj("data validation", dataGroupCount, dataCriticality, groupCriticality);
+				} catch (InvalidConfigurationException e) {
+					throw new Exception(
+							"Invalid/Missing configuration for data GroupCriticality configuration('dataCriticality' or 'dataGroupCount') parameter value, provide valid numbers.");
+				}
+
+			}
+			if (isFailOnViolationGroup) {
+				try {
+					validateCriteriaObj("oas violation", violationGroupCount, violationCriticality , groupCriticality);
+				} catch (InvalidConfigurationException e) {
+					throw new Exception(
+							"Invalid/Missing configuration for violation GroupCriticality configuration('violationCriticality' or 'violationGroupCount') parameter value, provide valid numbers.");
+				}
+			}
+			failConditions.add("groupCriticality", groupCriticality);
+		}
     	criteriaObject.add("failConditions", failConditions);
-    	//criteria = {"failConditions": {"grade":"10.2", "groupCriticality": {"Security":{"count": 0, "Criticality":"12.35"}, "":{}, }}}
     	return criteriaObject;
     }
+    
+    public void validateCriteriaObj(String criticalityGroup, String groupCount, String severity, JsonObject groupCriticality) throws InvalidConfigurationException
+    {
+    	ValidateParameters.validateSeverity(severity);
+		ValidateParameters.validateGroupCountNumber(groupCount);
+    	JsonObject obj = new JsonObject();
+    	obj.addProperty("count", groupCount);
+    	obj.addProperty("severity", severity);
+		groupCriticality.add(criticalityGroup, obj);
+    }
+    
 }

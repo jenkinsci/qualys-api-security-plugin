@@ -16,7 +16,6 @@ import com.qualys.plugins.QualysAPISecurityPlugin.QualysCriteria.QualysCriteria;
 import com.qualys.plugins.QualysAPISecurityPlugin.util.Helper;
 
 import hudson.model.TaskListener;
-import hudson.util.Secret;
 import jenkins.security.MasterToSlaveCallable;
 
 public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
@@ -26,9 +25,7 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
 	private static final long serialVersionUID = 1L;
     private TaskListener listener;
     private String apiId;
-    private String newAppName;
     private String portalUrl;
-    
     private QualysAuth auth;
     private String swaggerPath;
     private String workspace;
@@ -38,13 +35,12 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     
     private final static Logger logger = Helper.getLogger(APISecLauncher.class.getName());
     
-    public APISecLauncher(TaskListener listener, String apiId, String newAppName, 
+    public APISecLauncher(TaskListener listener, String apiId, 
     		QualysAuth auth, String portalUrl, String swaggerPath, String workspace,
     		boolean failConditionsConfigured, String criteria) {
-    	//this.run = run;
+    	
     	this.listener = listener;
     	this.apiId = apiId;
-    	this.newAppName = newAppName;
     	this.auth = auth;
     	this.portalUrl = portalUrl;
     	this.swaggerPath = swaggerPath;
@@ -65,26 +61,23 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     		throw new Exception("Error launching scan. Message: " + (response.errorMessage != null ? response.errorMessage : "Response code from server - " + response.responseCode));
     	}else {
     		respObj = response.response;
-    		this.listener.getLogger().println("Successfully launched API static assessment.");
+    		this.listener.getLogger().println("Successfully launched Qualys API Security Assessment.");
     		JsonElement swaggerState = respObj.get("swaggerState");
+    		
 			if(swaggerState != null && !swaggerState.getAsString().equalsIgnoreCase("valid")) {
-				validationFailed = true;
-				invalidSwagger = true;
-				renderReport = false;
-				failureMessage = "Invalid Swagger state found. API returned with swagger state: " + swaggerState.getAsString() + "\n";
+				this.listener.getLogger().println("Swagger state of this file is - " + swaggerState.getAsString());
 			}
-    		//evaluate only if swaggerState is valid
-			if(!invalidSwagger) {
-	    		evaluationResult = evaluateFailurePolicy(respObj);
-				buildPassed = evaluationResult.get("passed").getAsBoolean();
-				
-	    		if(failConditionsConfigured) {
-	    			if(buildPassed) listener.getLogger().println("Qualys Static Assessment - Build passes the configured pass/fail criteria.");
-	    			else listener.getLogger().println("Qualys Static Assessment - Failing the build against the configured pass/fail criteria.");
-	    		}
-	    		
-	    		respObj.add("buildEvaluationResult", evaluationResult);
-			}
+    		
+    		evaluationResult = evaluateFailurePolicy(respObj);
+			buildPassed = evaluationResult.get("passed").getAsBoolean();
+			
+    		if(failConditionsConfigured) {
+    			if(buildPassed) listener.getLogger().println("Qualys API Security Assessment - Build passes the configured pass/fail criteria.");
+    			else listener.getLogger().println("Qualys API Security Assessment - Failing the build against the configured pass/fail criteria.");
+    		}
+    		
+    		respObj.add("buildEvaluationResult", evaluationResult);
+			
     	}
     	if(evaluationResult != null && evaluationResult.has("passed")) {
     		if(failConditionsConfigured && !buildPassed) {
@@ -126,8 +119,8 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     	QualysAPISecClient apiClient = new QualysAPISecClient(auth, this.listener.getLogger());
     	
     	try {
-    		listener.getLogger().println("Testing connection with Qualys API server...");
-    		logger.info("Testing connection with Qualys API server...");
+    		listener.getLogger().println("Checking token for APISEC module");
+    		logger.info("Checking token for APISEC module");
     		//test connection
     		int retryCount = 0;
     		boolean retry = true;
@@ -140,9 +133,7 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
 	    		retryCount++;
 	    		
 	    		//JP-210 retry 3 times after 5 sec delay to test connection
-	    		if(testConnResp.success == true && testConnResp.responseCode == 200) {
-	    			listener.getLogger().println("Test connection successful.");
-	    			logger.info("Test connection successful. Response code: " + testConnResp.responseCode);
+	    		if(testConnResp.success == true && testConnResp.responseCode == 201) {
 	    			break;
 		   		}else if(testConnResp.responseCode >= 500 && testConnResp.responseCode <= 599 && retryCount < 3) {
     				retry = true;
@@ -163,7 +154,7 @@ public class APISecLauncher extends MasterToSlaveCallable<String, Exception> {
     	
     	File uploadSwaggerFile = new File(workspace + File.separator + swaggerPath);
     	apiClient.setTimeout(300);
-    	resp = apiClient.updateCicd(uploadSwaggerFile, apiId);
+    	resp = apiClient.assessAPI(uploadSwaggerFile, apiId);
     	if(resp.errored || resp.responseCode != 200) {
     		if(resp.response != null && resp.response.has("message")) {
     			throw new Exception("Static Assesment API failed; Response code from server: " + resp.responseCode + ". Error message: " + resp.response.get("message"));

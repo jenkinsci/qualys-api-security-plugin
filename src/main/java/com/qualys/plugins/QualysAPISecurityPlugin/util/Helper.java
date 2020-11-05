@@ -1,24 +1,8 @@
 package com.qualys.plugins.QualysAPISecurityPlugin.util;
 
 
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-
-import org.apache.commons.io.FileUtils;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
-import hudson.util.ListBoxModel.Option;
-
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -29,6 +13,19 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+
+import org.apache.commons.io.FileUtils;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+
+import hudson.util.ListBoxModel.Option;
 
 public class Helper {
 	
@@ -67,8 +64,12 @@ public class Helper {
     	platform7.put("portal", "https://qualysguard.qg1.apps.qualys.in"); aList.put("INDIA_PLATFORM", platform7);
     	
     	Map<String, String> platform8 = new HashMap <String, String>();
-    	platform8.put("name", "Private Cloud Platform"); platform8.put("code", "PCP"); platform8.put("url", "");
-    	aList.put("PCP", platform8);
+    	platform8.put("name", "CANADA Platform"); platform8.put("code", "CANADA_PLATFORM"); platform8.put("url", "https://qualysapi.qg1.apps.qualys.ca");
+    	platform8.put("portal", "https://qualysguard.qg1.apps.qualys.ca"); aList.put("CANADA_PLATFORM", platform8);
+    	
+    	Map<String, String> platform9 = new HashMap <String, String>();
+    	platform9.put("name", "Private Cloud Platform"); platform9.put("code", "PCP"); platform9.put("url", "");
+    	aList.put("PCP", platform9);
     	
     	platformsList = Collections.unmodifiableMap(aList);
     }
@@ -81,7 +82,7 @@ public class Helper {
 	    }
 	    
 	    if(!f.getCanonicalPath().startsWith(rootDir.getCanonicalPath())) {
-	    	throw new Exception("Can not create file due to security reasons. Suspecious filename - "+ f.getCanonicalPath() + ".");
+	    	throw new Exception("Can not create file due to security reasons. Suspicious filename - "+ f.getCanonicalPath() + ".");
 	    }
 
 	    if(!f.exists()){
@@ -151,6 +152,17 @@ public class Helper {
         }
     };
 	
+	public static String criticalityToSeverity(int criticalityInt) {
+		if (criticalityInt >= 0 && criticalityInt < 3) {
+			return Severity.LOW.getValue();
+		} else if (criticalityInt == 3) {
+			return Severity.MEDIUM.getValue();
+		} else if (criticalityInt > 3 && criticalityInt <= 5) {
+			return Severity.HIGH.getValue();
+		}
+		return "";
+	}
+    
 	public static class QualysLogFormatter extends Formatter {
         // Create a DateFormat to format the logger timestamp.
         private static final DateFormat df = new SimpleDateFormat("MMM dd, yyyy hh:mm:ss a");

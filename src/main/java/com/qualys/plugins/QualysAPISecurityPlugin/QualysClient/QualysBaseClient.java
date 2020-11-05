@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 
 import org.apache.http.HttpHost;
@@ -15,8 +17,10 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.routing.HttpRoutePlanner;
+import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLContextBuilder;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -26,9 +30,9 @@ import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import com.qualys.plugins.QualysAPISecurityPlugin.QualysAuth.QualysAuth;
 
 class QualysBaseClient {
-    private QualysAuth auth;
+	protected QualysAuth auth;
     protected PrintStream stream;
-    protected int timeout = 30; // in seconds
+    protected int timeout = 60; // in seconds
 
     public QualysBaseClient (QualysAuth auth) {
         this.auth = auth;
@@ -45,23 +49,29 @@ class QualysBaseClient {
         URL url = new URL(this.auth.getServer() + path);
         return url;
     }
-
+    
+    protected byte[] getJWTAuthHeader() {
+        String userPass = "username=" + this.auth.getUsername() + "&password=" + this.auth.getPassword().getPlainText() + "&token=true";
+        return userPass.getBytes();
+    }
+    
     protected String getBasicAuthHeader() {
         String userPass = this.auth.getUsername() + ":" + this.auth.getPassword().getPlainText();
         String encoded = Base64.getEncoder().encodeToString((userPass).getBytes(StandardCharsets.UTF_8));
         return encoded;
     }
-    
-    protected CloseableHttpClient getHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
+	
+	  protected CloseableHttpClient getHttpClient() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
     	
     	RequestConfig config = RequestConfig.custom()
   	    	  .setConnectTimeout(this.timeout * 1000)
   	    	  .setConnectionRequestTimeout(this.timeout * 1000)
   	    	  .setSocketTimeout(this.timeout * 1000).build(); // Timeout settings
-    	SSLContextBuilder builder = new SSLContextBuilder();
-    	//builder.loadTrustMaterial(null, (chain, authType) -> true);
-    	SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build());
-    	final HttpClientBuilder clientBuilder = HttpClients.custom().setSSLSocketFactory(sslsf);
+		
+		SSLContextBuilder builder = new SSLContextBuilder();
+		//builder.loadTrustMaterial(null, (chain, authType) -> true);
+  	    SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build()); 
+  	    final HttpClientBuilder clientBuilder = HttpClients.custom().setSSLSocketFactory(sslsf);	 
     	
     	final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
     	
@@ -69,6 +79,7 @@ class QualysBaseClient {
     	clientBuilder.setDefaultCredentialsProvider(credentialsProvider);    	
     	
     	if(this.auth.getProxyServer() != null && !this.auth.getProxyServer().isEmpty()) { 
+    		System.out.println("Using proxy  (server=" + this.auth.getProxyServer() + ")");     
     		final HttpHost proxyHost = new HttpHost(this.auth.getProxyServer(),this.auth.getProxyPort()); 	
     		final HttpRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxyHost);
     		clientBuilder.setRoutePlanner(routePlanner);
@@ -84,7 +95,7 @@ class QualysBaseClient {
     	}
     	return clientBuilder.build();
     } 
-    
+	
     /**
      * This method use to set connection timeout for http client.   
      * @param timeout - int - in secs
