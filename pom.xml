@@ -113,6 +113,14 @@
 	<url>https://www.qualys.com/</url>
 </organization>
 
+<developers>
+	<developer>
+		<id>Qualys</id>
+		<name>Qualys Inc.</name>
+		<email>plugins@qualys.com</email>
+	</developer>
+</developers>
+
 <scm>
 	<connection>scm:git:ssh://github.com/jenkinsci/qualys-api-security-plugin.git</connection>
 	<developerConnection>scm:git:ssh://git@github.com/jenkinsci/qualys-api-security-plugin.git</developerConnection>
